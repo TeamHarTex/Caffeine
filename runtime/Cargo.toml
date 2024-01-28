@@ -1,0 +1,6 @@
+[workspace]
+members = [
+    "runtime_cfparser"
+]
+
+resolver = "2"
