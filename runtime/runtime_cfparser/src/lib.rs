@@ -76,7 +76,7 @@ impl<'class> ClassParser<'class> {
 
 impl<'class> ClassParser<'class> {
     /// Parses a [`ClassFile`] and returns it if it succeeds in doing so.
-    /// 
+    ///
     /// [`ClassFile`]: crate::class::ClassFile
     pub fn parse(&'class mut self) -> Result<ClassFile> {
         todo!()
