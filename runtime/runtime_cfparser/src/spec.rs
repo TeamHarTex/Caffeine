@@ -14,4 +14,16 @@
  * limitations under the License.
  */
 
-pub struct ClassFile;
+pub struct Classfile<'a> {
+    pub version: Version,
+    pub constant_pool: Vec<ConstantPoolEntry<'a>>,
+}
+
+pub enum ConstantPoolEntry<'class> {
+    Utf8 { bytes: &'class [u8] },
+}
+
+pub struct Version {
+    pub minor: u16,
+    pub major: u16,
+}

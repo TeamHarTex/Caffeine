@@ -7,3 +7,4 @@ license = "Apache-2.0"
 
 [dependencies]
 anyhow = "1.0.79"
+nom = "7.1.3"
