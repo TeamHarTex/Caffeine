@@ -16,12 +16,13 @@
 
 use nom::bytes::complete::tag;
 use nom::bytes::complete::take;
-use nom::Err;
 use nom::error::Error;
 use nom::error::ErrorKind;
 use nom::multi::length_count;
-use nom::number::complete::{be_u16, be_u32};
+use nom::number::complete::be_u16;
+use nom::number::complete::be_u32;
 use nom::number::complete::be_u8;
+use nom::Err;
 use nom::IResult;
 
 use crate::spec::Classfile;
@@ -63,37 +64,92 @@ fn constant_pool_entry_from_bytes<'a>(bytes: &'a [u8]) -> IResult<&[u8], Constan
         4 => constant_pool_float_entry_from_bytes(input),
         5 => constant_pool_long_entry_from_bytes(input),
         6 => constant_pool_double_entry_from_bytes(input),
+        7 => constant_pool_class_entry_from_bytes(input),
+        8 => constant_pool_string_entry_from_bytes(input),
         _ => Err(Err::Error(Error::new(bytes, ErrorKind::Tag))),
     }
 }
 
-fn constant_pool_double_entry_from_bytes<'a>(bytes: &'a [u8]) -> IResult<&[u8], ConstantPoolEntry<'a>> {
+fn constant_pool_class_entry_from_bytes<'a>(
+    bytes: &'a [u8],
+) -> IResult<&[u8], ConstantPoolEntry<'a>> {
+    let (input, name_index) = be_u16(bytes)?;
+
+    Ok((input, ConstantPoolEntry::Class { name_index }))
+}
+
+fn constant_pool_double_entry_from_bytes<'a>(
+    bytes: &'a [u8],
+) -> IResult<&[u8], ConstantPoolEntry<'a>> {
     let (input_1, high_bytes) = be_u32(bytes)?;
     let (input_2, low_bytes) = be_u32(input_1)?;
 
-    Ok((input_2, ConstantPoolEntry::Double { high_bytes, low_bytes }))
+    Ok((
+        input_2,
+        ConstantPoolEntry::Double {
+            high_bytes,
+            low_bytes,
+        },
+    ))
 }
 
-fn constant_pool_float_entry_from_bytes<'a>(bytes: &'a [u8]) -> IResult<&[u8], ConstantPoolEntry<'a>> {
+fn constant_pool_float_entry_from_bytes<'a>(
+    bytes: &'a [u8],
+) -> IResult<&[u8], ConstantPoolEntry<'a>> {
     let (input, float) = be_u32(bytes)?;
 
     Ok((input, ConstantPoolEntry::Float { bytes: float }))
 }
 
-fn constant_pool_integer_entry_from_bytes<'a>(bytes: &'a [u8]) -> IResult<&[u8], ConstantPoolEntry<'a>> {
+fn constant_pool_field_ref_entry_from_bytes<'a>(
+    bytes: &'a [u8],
+) -> IResult<&[u8], ConstantPoolEntry<'a>> {
+    let (input_1, class_index) = be_u16(bytes)?;
+    let (input_2, name_and_type_index) = be_u16(input_1)?;
+
+    Ok((
+        input_2,
+        ConstantPoolEntry::FieldRef {
+            class_index,
+            name_and_type_index,
+        },
+    ))
+}
+
+fn constant_pool_integer_entry_from_bytes<'a>(
+    bytes: &'a [u8],
+) -> IResult<&[u8], ConstantPoolEntry<'a>> {
     let (input, integer) = be_u32(bytes)?;
 
     Ok((input, ConstantPoolEntry::Utf8 { bytes: integer }))
 }
 
-fn constant_pool_long_entry_from_bytes<'a>(bytes: &'a [u8]) -> IResult<&[u8], ConstantPoolEntry<'a>> {
+fn constant_pool_long_entry_from_bytes<'a>(
+    bytes: &'a [u8],
+) -> IResult<&[u8], ConstantPoolEntry<'a>> {
     let (input_1, high_bytes) = be_u32(bytes)?;
     let (input_2, low_bytes) = be_u32(input_1)?;
 
-    Ok((input_2, ConstantPoolEntry::Long { high_bytes, low_bytes }))
+    Ok((
+        input_2,
+        ConstantPoolEntry::Long {
+            high_bytes,
+            low_bytes,
+        },
+    ))
 }
 
-fn constant_pool_utf8_entry_from_bytes<'a>(bytes: &'a [u8]) -> IResult<&[u8], ConstantPoolEntry<'a>> {
+fn constant_pool_string_entry_from_bytes<'a>(
+    bytes: &'a [u8],
+) -> IResult<&[u8], ConstantPoolEntry<'a>> {
+    let (input, string_index) = be_u16(bytes)?;
+
+    Ok((input, ConstantPoolEntry::String { string_index }))
+}
+
+fn constant_pool_utf8_entry_from_bytes<'a>(
+    bytes: &'a [u8],
+) -> IResult<&[u8], ConstantPoolEntry<'a>> {
     let (input_1, length) = be_u16(bytes)?;
     let (input_2, str_bytes) = take(length as usize)(input_1)?;
 

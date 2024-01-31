@@ -21,15 +21,40 @@ pub struct Classfile<'a> {
 
 pub enum ConstantPoolEntry<'class> {
     // Tag: 1
-    Utf8 { bytes: &'class [u8] },
+    Utf8 {
+        bytes: &'class [u8],
+    },
     // Tag: 3
-    Integer { bytes: u32 },
+    Integer {
+        bytes: u32,
+    },
     // Tag: 4
-    Float { bytes: u32 },
+    Float {
+        bytes: u32,
+    },
     // Tag: 5
-    Long { high_bytes: u32, low_bytes: u32 },
+    Long {
+        high_bytes: u32,
+        low_bytes: u32,
+    },
     // Tag: 6
-    Double { high_bytes: u32, low_bytes: u32 },
+    Double {
+        high_bytes: u32,
+        low_bytes: u32,
+    },
+    // Tag: 7
+    Class {
+        name_index: u16,
+    },
+    // Tag: 8
+    String {
+        string_index: u16,
+    },
+    // Tag: 9
+    FieldRef {
+        class_index: u16,
+        name_and_type_index: u16,
+    },
 }
 
 pub struct Version {
