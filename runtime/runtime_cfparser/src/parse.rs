@@ -70,6 +70,10 @@ fn constant_pool_entry_from_bytes<'a>(bytes: &'a [u8]) -> IResult<&[u8], Constan
         10 => constant_pool_method_ref_entry_from_bytes(input),
         11 => constant_pool_instance_method_ref_entry_from_bytes(input),
         12 => constant_pool_name_and_type_entry_from_bytes(input),
+        15 => constant_pool_method_handle_entry_from_bytes(input),
+        16 => constant_pool_method_type_entry_from_bytes(input),
+        17 => constant_pool_dynamic_entry_from_bytes(input),
+        18 => constant_pool_invoke_dynamic_entry_from_bytes(input),
         _ => Err(Err::Error(Error::new(bytes, ErrorKind::Tag))),
     }
 }
@@ -93,6 +97,21 @@ fn constant_pool_double_entry_from_bytes<'a>(
         ConstantPoolEntry::Double {
             high_bytes,
             low_bytes,
+        },
+    ))
+}
+
+fn constant_pool_dynamic_entry_from_bytes<'a>(
+    bytes: &'a [u8],
+) -> IResult<&[u8], ConstantPoolEntry<'a>> {
+    let (input_1, bootstrap_method_attr_index) = be_u16(bytes)?;
+    let (input_2, name_and_type_index) = be_u16(input_1)?;
+
+    Ok((
+        input_2,
+        ConstantPoolEntry::Dynamic {
+            bootstrap_method_attr_index,
+            name_and_type_index,
         },
     ))
 }
@@ -143,6 +162,21 @@ fn constant_pool_integer_entry_from_bytes<'a>(
     Ok((input, ConstantPoolEntry::Utf8 { bytes: integer }))
 }
 
+fn constant_pool_invoke_dynamic_entry_from_bytes<'a>(
+    bytes: &'a [u8],
+) -> IResult<&[u8], ConstantPoolEntry<'a>> {
+    let (input_1, bootstrap_method_attr_index) = be_u16(bytes)?;
+    let (input_2, name_and_type_index) = be_u16(input_1)?;
+
+    Ok((
+        input_2,
+        ConstantPoolEntry::InvokeDynamic {
+            bootstrap_method_attr_index,
+            name_and_type_index,
+        },
+    ))
+}
+
 fn constant_pool_long_entry_from_bytes<'a>(
     bytes: &'a [u8],
 ) -> IResult<&[u8], ConstantPoolEntry<'a>> {
@@ -156,6 +190,29 @@ fn constant_pool_long_entry_from_bytes<'a>(
             low_bytes,
         },
     ))
+}
+
+fn constant_pool_method_handle_entry_from_bytes<'a>(
+    bytes: &'a [u8],
+) -> IResult<&[u8], ConstantPoolEntry<'a>> {
+    let (input_1, reference_kind) = be_u8(bytes)?;
+    let (input_2, reference_index) = be_u16(input_1)?;
+
+    Ok((
+        input_2,
+        ConstantPoolEntry::MethodHandle {
+            reference_kind,
+            reference_index,
+        },
+    ))
+}
+
+fn constant_pool_method_type_entry_from_bytes<'a>(
+    bytes: &'a [u8],
+) -> IResult<&[u8], ConstantPoolEntry<'a>> {
+    let (input, reference_index) = be_u16(bytes)?;
+
+    Ok((input, ConstantPoolEntry::MethodType { reference_index }))
 }
 
 fn constant_pool_method_ref_entry_from_bytes<'a>(

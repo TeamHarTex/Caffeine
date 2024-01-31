@@ -70,6 +70,25 @@ pub enum ConstantPoolEntry<'class> {
         name_index: u16,
         descriptor_index: u16,
     },
+    // Tag: 15
+    MethodHandle {
+        reference_kind: u8,
+        reference_index: u16,
+    },
+    // Tag: 16
+    MethodType {
+        reference_index: u16,
+    },
+    // Tag: 17
+    Dynamic {
+        bootstrap_method_attr_index: u16,
+        name_and_type_index: u16,
+    },
+    // Tag: 18
+    InvokeDynamic {
+        bootstrap_method_attr_index: u16,
+        name_and_type_index: u16,
+    },
 }
 
 pub struct Version {
