@@ -14,7 +14,19 @@
  * limitations under the License.
  */
 
-pub enum AttributeInfo {}
+pub enum AttributeInfo<'class> {
+    ConstantValue {
+        constantvalue_index: u16,
+    },
+    Code {
+        max_stack: u16,
+        max_locals: u16,
+        code: &'class [u8],
+        exception_table: Vec<ExceptionTableEntry>,
+        attributes: Vec<Attribute<'class>>,
+    },
+    StackMapTable {},
+}
 
 pub enum ConstantPoolEntry<'class> {
     // Tag: 1
@@ -96,6 +108,44 @@ pub enum ConstantPoolEntry<'class> {
     },
 }
 
+pub enum StackMapFrame {
+    AppendFrame {
+        offset_delta: u16,
+        locals: Vec<VerificationTypeInfo>,
+    },
+    ChopFrame {
+        offset_delta: u16,
+    },
+    FullFrame {
+        offset_delta: u16,
+        locals: Vec<VerificationTypeInfo>,
+        stack: Vec<VerificationTypeInfo>,
+    },
+    SameFrame,
+    SameFrameExtended {
+        offset_delta: u16,
+    },
+    SameLocals1StackItemFrame {
+        stack: VerificationTypeInfo,
+    },
+    SameLocals1StackItemFrameExtended {
+        offset_delta: u16,
+        stack: VerificationTypeInfo,
+    },
+}
+
+pub enum VerificationTypeInfo {
+    DoubleVariable,
+    FloatVariable,
+    IntegerVariable,
+    LongVariable,
+    NullVariable,
+    ObjectVariable,
+    TopVariable,
+    UninitializedThisVariable,
+    UninitializedVariable,
+}
+
 pub struct AccessFlags;
 
 impl AccessFlags {
@@ -110,9 +160,9 @@ impl AccessFlags {
     pub const MODULE: u16 = 0x8000;
 }
 
-pub struct Attribute {
+pub struct Attribute<'class> {
     pub attribute_name_index: u16,
-    pub info: AttributeInfo,
+    pub info: AttributeInfo<'class>,
 }
 
 pub struct Classfile<'a> {
@@ -122,6 +172,13 @@ pub struct Classfile<'a> {
     pub this_class: u16,
     pub super_class: u16,
     pub interfaces: Vec<u16>,
+}
+
+pub struct ExceptionTableEntry {
+    pub start_pc: u16,
+    pub end_pc: u16,
+    pub handler_pc: u16,
+    pub catch_type: u16,
 }
 
 pub struct Version {
