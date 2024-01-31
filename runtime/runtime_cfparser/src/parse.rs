@@ -74,6 +74,8 @@ fn constant_pool_entry_from_bytes<'a>(bytes: &'a [u8]) -> IResult<&[u8], Constan
         16 => constant_pool_method_type_entry_from_bytes(input),
         17 => constant_pool_dynamic_entry_from_bytes(input),
         18 => constant_pool_invoke_dynamic_entry_from_bytes(input),
+        19 => constant_pool_module_entry_from_bytes(input),
+        20 => constant_pool_package_entry_from_bytes(input),
         _ => Err(Err::Error(Error::new(bytes, ErrorKind::Tag))),
     }
 }
@@ -230,6 +232,14 @@ fn constant_pool_method_ref_entry_from_bytes<'a>(
     ))
 }
 
+fn constant_pool_module_entry_from_bytes<'a>(
+    bytes: &'a [u8],
+) -> IResult<&[u8], ConstantPoolEntry<'a>> {
+    let (input, name_index) = be_u16(bytes)?;
+
+    Ok((input, ConstantPoolEntry::Module { name_index }))
+}
+
 fn constant_pool_name_and_type_entry_from_bytes<'a>(
     bytes: &'a [u8],
 ) -> IResult<&[u8], ConstantPoolEntry<'a>> {
@@ -243,6 +253,14 @@ fn constant_pool_name_and_type_entry_from_bytes<'a>(
             descriptor_index,
         },
     ))
+}
+
+fn constant_pool_package_entry_from_bytes<'a>(
+    bytes: &'a [u8],
+) -> IResult<&[u8], ConstantPoolEntry<'a>> {
+    let (input, name_index) = be_u16(bytes)?;
+
+    Ok((input, ConstantPoolEntry::Package { name_index }))
 }
 
 fn constant_pool_string_entry_from_bytes<'a>(

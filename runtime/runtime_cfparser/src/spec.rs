@@ -89,6 +89,14 @@ pub enum ConstantPoolEntry<'class> {
         bootstrap_method_attr_index: u16,
         name_and_type_index: u16,
     },
+    // Tag: 19
+    Module {
+        name_index: u16,
+    },
+    // Tag: 20
+    Package {
+        name_index: u16,
+    },
 }
 
 pub struct Version {
