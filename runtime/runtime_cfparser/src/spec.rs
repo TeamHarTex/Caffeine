@@ -55,6 +55,21 @@ pub enum ConstantPoolEntry<'class> {
         class_index: u16,
         name_and_type_index: u16,
     },
+    // Tag: 10
+    MethodRef {
+        class_index: u16,
+        name_and_type_index: u16,
+    },
+    // Tag: 11
+    InstanceMethodRef {
+        class_index: u16,
+        name_and_type_index: u16,
+    },
+    // Tag: 12
+    NameAndType {
+        name_index: u16,
+        descriptor_index: u16,
+    },
 }
 
 pub struct Version {
