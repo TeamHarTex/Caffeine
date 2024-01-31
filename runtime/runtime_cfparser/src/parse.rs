@@ -39,11 +39,27 @@ pub fn classfile_from_bytes(bytes: &[u8]) -> IResult<&[u8], Classfile> {
     // parse constant pool length and constant pool
     let (input_3, constant_pool) = length_count(be_u16, constant_pool_entry_from_bytes)(input_2)?;
 
+    // parse access flags
+    let (input_4, access_flags) = be_u16(input_3)?;
+
+    // parse this class
+    let (input_5, this_class) = be_u16(input_4)?;
+
+    // parse super class
+    let (input_6, super_class) = be_u16(input_5)?;
+
+    // parse interfaces
+    let (input_7, interfaces) = length_count(be_u16, be_u16)(input_6)?;
+
     Ok((
         input_3,
         Classfile {
             version,
             constant_pool,
+            access_flags,
+            this_class,
+            super_class,
+            interfaces,
         },
     ))
 }
@@ -161,7 +177,7 @@ fn constant_pool_integer_entry_from_bytes<'a>(
 ) -> IResult<&[u8], ConstantPoolEntry<'a>> {
     let (input, integer) = be_u32(bytes)?;
 
-    Ok((input, ConstantPoolEntry::Utf8 { bytes: integer }))
+    Ok((input, ConstantPoolEntry::Integer { bytes: integer }))
 }
 
 fn constant_pool_invoke_dynamic_entry_from_bytes<'a>(
