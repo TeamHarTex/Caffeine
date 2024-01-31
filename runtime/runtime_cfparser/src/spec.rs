@@ -14,28 +14,7 @@
  * limitations under the License.
  */
 
-pub struct AccessFlags;
-
-impl AccessFlags {
-    pub const PUBLIC: u16 = 0x0001;
-    pub const FINAL: u16 = 0x0010;
-    pub const SUPER: u16 = 0x0020;
-    pub const INTERFACE: u16 = 0x0200;
-    pub const ABSTRACT: u16 = 0x0400;
-    pub const SYNTHETIC: u16 = 0x1000;
-    pub const ANNOTATION: u16 = 0x2000;
-    pub const ENUM: u16 = 0x4000;
-    pub const MODULE: u16 = 0x8000;
-}
-
-pub struct Classfile<'a> {
-    pub version: Version,
-    pub constant_pool: Vec<ConstantPoolEntry<'a>>,
-    pub access_flags: u16,
-    pub this_class: u16,
-    pub super_class: u16,
-    pub interfaces: Vec<u16>,
-}
+pub enum AttributeInfo {}
 
 pub enum ConstantPoolEntry<'class> {
     // Tag: 1
@@ -115,6 +94,34 @@ pub enum ConstantPoolEntry<'class> {
     Package {
         name_index: u16,
     },
+}
+
+pub struct AccessFlags;
+
+impl AccessFlags {
+    pub const PUBLIC: u16 = 0x0001;
+    pub const FINAL: u16 = 0x0010;
+    pub const SUPER: u16 = 0x0020;
+    pub const INTERFACE: u16 = 0x0200;
+    pub const ABSTRACT: u16 = 0x0400;
+    pub const SYNTHETIC: u16 = 0x1000;
+    pub const ANNOTATION: u16 = 0x2000;
+    pub const ENUM: u16 = 0x4000;
+    pub const MODULE: u16 = 0x8000;
+}
+
+pub struct Attribute {
+    pub attribute_name_index: u16,
+    pub info: AttributeInfo,
+}
+
+pub struct Classfile<'a> {
+    pub version: Version,
+    pub constant_pool: Vec<ConstantPoolEntry<'a>>,
+    pub access_flags: u16,
+    pub this_class: u16,
+    pub super_class: u16,
+    pub interfaces: Vec<u16>,
 }
 
 pub struct Version {
