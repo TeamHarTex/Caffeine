@@ -60,8 +60,11 @@ pub fn classfile_from_bytes(bytes: &[u8]) -> IResult<&[u8], Classfile> {
     // parse methods
     let (input_9, methods) = length_count(be_u16, method_from_bytes)(input_8)?;
 
+    // parse attributes
+    let (input_10, attributes) = length_count(be_u16, attribute_from_bytes)(input_9)?;
+
     Ok((
-        input_3,
+        input_10,
         Classfile {
             version,
             constant_pool,
@@ -71,6 +74,7 @@ pub fn classfile_from_bytes(bytes: &[u8]) -> IResult<&[u8], Classfile> {
             interfaces,
             fields,
             methods,
+            attributes,
         },
     ))
 }

@@ -306,6 +306,7 @@ pub struct Classfile<'a> {
     pub interfaces: Vec<u16>,
     pub fields: Vec<Field<'a>>,
     pub methods: Vec<Method<'a>>,
+    pub attributes: Vec<Attribute<'a>>,
 }
 
 pub struct ElementValuePair {
