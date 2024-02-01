@@ -15,6 +15,12 @@
  */
 
 pub enum AttributeInfo<'class> {
+    AnnotationDefault {
+        default_value: ElementValue,
+    },
+    BootstrapMethods {
+        bootstrap_methods: Vec<BootstrapMethod<'class>>,
+    },
     ConstantValue {
         constantvalue_index: u16,
     },
@@ -45,17 +51,55 @@ pub enum AttributeInfo<'class> {
     LocalVariableTypeTable {
         local_variable_type_table: Vec<LocalVariableType>,
     },
+    MethodParameters {
+        parameters: Vec<MethodParameter>,
+    },
+    Module {
+        module_name_index: u16,
+        module_flags: u16,
+        module_version_index: u16,
+
+        requires: Vec<ModuleRequire>,
+        exports: Vec<ModuleExport<'class>>,
+        opens: Vec<ModuleOpens<'class>>,
+        uses: &'class [u16],
+        provides: Vec<ModuleProvides<'class>>,
+    },
+    ModuleMainClass {
+        main_class_index: u16,
+    },
+    ModulePackages {
+        package_index: &'class [u16],
+    },
+    NestHost {
+        host_class_index: u16,
+    },
+    NestMembers {
+        classes: &'class [u16],
+    },
+    PermittedSubclasses {
+        classes: &'class [u16],
+    },
+    Record {
+        components: Vec<RecordComponent<'class>>,
+    },
     RuntimeInvisibleAnnotations {
         annotations: Vec<Annotation>,
     },
     RuntimeInvisibleParameterAnnotations {
         parameter_annotations: Vec<Annotation>,
     },
+    RuntimeInvisibleTypeAnnotations {
+        type_annotations: Vec<TypeAnnotation>,
+    },
     RuntimeVisibleAnnotations {
         annotations: Vec<Annotation>,
     },
     RuntimeVisibleParameterAnnotations {
         parameter_annotations: Vec<Annotation>,
+    },
+    RuntimeVisibleTypeAnnotations {
+        type_annotations: Vec<TypeAnnotation>,
     },
     Signature {
         signature_index: u16,
@@ -161,8 +205,8 @@ pub enum ElementValue {
         const_name_index: u16,
     },
     Array {
-        values: Vec<ElementValue>
-    }
+        values: Vec<ElementValue>,
+    },
 }
 
 pub enum StackMapFrame {
@@ -188,6 +232,27 @@ pub enum StackMapFrame {
     SameLocals1StackItemFrameExtended {
         offset_delta: u16,
         stack: VerificationTypeInfo,
+    },
+}
+
+pub enum TargetInfo {
+    Catch(u16),
+    Empty,
+    FormalParameter(u8),
+    LocalVar {
+        table: Vec<LocalVar>,
+    },
+    Offset(u16),
+    Supertype(u16),
+    Throws(u16),
+    TypeArgument {
+        offset: u16,
+        type_argument_index: u16,
+    },
+    TypeParameter(u8),
+    TypeParameterBound {
+        type_parameter_index: u8,
+        bound_index: u8,
     },
 }
 
@@ -227,6 +292,11 @@ pub struct Annotation {
     pub element_value_pairs: Vec<ElementValuePair>,
 }
 
+pub struct BootstrapMethod<'a> {
+    pub bootstrap_method_ref: u16,
+    pub bootstrap_arguments: &'a [u16],
+}
+
 pub struct Classfile<'a> {
     pub version: Version,
     pub constant_pool: Vec<ConstantPoolEntry<'a>>,
@@ -260,6 +330,12 @@ pub struct LineNumber {
     pub line_number: u16,
 }
 
+pub struct LocalVar {
+    pub start_pc: u16,
+    pub length: u16,
+    pub index: u16,
+}
+
 pub struct LocalVariable {
     pub start_pc: u16,
     pub length: u16,
@@ -274,6 +350,88 @@ pub struct LocalVariableType {
     pub name_index: u16,
     pub descriptor_index: u16,
     pub index: u16,
+}
+
+pub struct MethodParameter {
+    pub name_index: u16,
+    pub access_flags: u16,
+}
+
+pub struct ModuleExport<'a> {
+    pub exports_index: u16,
+    pub exports_flags: u16,
+    pub exports_to_indices: &'a [u16],
+}
+
+pub struct ModuleExportFlags;
+
+impl ModuleExportFlags {
+    pub const ACC_SYNTHETIC: u16 = 0x1000;
+    pub const ACC_MANDATED: u16 = 0x8000;
+}
+
+pub struct ModuleFlags;
+
+impl ModuleFlags {
+    pub const ACC_OPEN: u16 = 0x0020;
+    pub const ACC_SYNTHETIC: u16 = 0x1000;
+    pub const ACC_MANDATED: u16 = 0x8000;
+}
+
+pub struct ModuleOpens<'a> {
+    pub opens_index: u16,
+    pub opens_flags: u16,
+    pub opens_to_indices: &'a [u16],
+}
+
+pub struct ModuleOpensFlags;
+
+impl ModuleOpensFlags {
+    pub const ACC_SYNTHETIC: u16 = 0x1000;
+    pub const ACC_MANDATED: u16 = 0x8000;
+}
+
+pub struct ModuleProvides<'a> {
+    pub provides_index: u16,
+    pub provides_with_indices: &'a [u16],
+}
+
+pub struct ModuleRequire {
+    pub requires_index: u16,
+    pub requires_flags: u16,
+    pub requires_version_index: u16,
+}
+
+pub struct ModuleRequireFlags;
+
+impl ModuleRequireFlags {
+    pub const ACC_TRANSITIVE: u16 = 0x0020;
+    pub const ACC_STATIC_PHASE: u16 = 0x0040;
+    pub const ACC_SYNTHETIC: u16 = 0x1000;
+    pub const ACC_MANDATED: u16 = 0x8000;
+}
+
+pub struct RecordComponent<'a> {
+    pub name_index: u16,
+    pub descriptor_index: u16,
+    pub attributes: Vec<Attribute<'a>>,
+}
+
+pub struct TypeAnnotation {
+    pub target_type: u8,
+    pub target_info: TargetInfo,
+    pub target_path: TypePath,
+    pub type_index: u16,
+    pub element_value_pairs: Vec<ElementValuePair>,
+}
+
+pub struct TypePath {
+    pub path: Vec<TypePathSegment>,
+}
+
+pub struct TypePathSegment {
+    pub type_path_kind: u8,
+    pub type_argument_index: u8,
 }
 
 pub struct Version {
