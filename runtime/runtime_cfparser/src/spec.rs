@@ -116,6 +116,7 @@ pub enum AttributeInfo<'class> {
     Synthetic,
 }
 
+#[derive(Clone)]
 pub enum ConstantPoolEntry<'class> {
     // Tag: 1
     Utf8 {
@@ -283,7 +284,6 @@ impl AccessFlags {
 }
 
 pub struct Attribute<'class> {
-    pub attribute_name_index: u16,
     pub info: AttributeInfo<'class>,
 }
 

@@ -14,6 +14,17 @@
  * limitations under the License.
  */
 
-pub mod cowext;
-pub mod parse;
-pub mod spec;
+use std::borrow::Cow;
+
+pub trait CowExt<'a> {
+    fn to_str_lossy(self) -> Cow<'a, str>;
+}
+
+impl<'a> CowExt<'a> for Cow<'a, [u8]> {
+    fn to_str_lossy(self) -> Cow<'a, str> {
+        match self {
+            Cow::Borrowed(slice) => String::from_utf8_lossy(slice),
+            Cow::Owned(bytes) => String::from_utf8_lossy(&bytes),
+        }
+    }
+}

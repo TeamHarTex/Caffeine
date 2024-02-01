@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+use mutf8::mutf8_to_utf8;
 use nom::bytes::complete::tag;
 use nom::bytes::complete::take;
 use nom::error::Error;
@@ -25,9 +26,14 @@ use nom::number::complete::be_u8;
 use nom::Err;
 use nom::IResult;
 
+use crate::cowext::CowExt;
+use crate::spec::Annotation;
 use crate::spec::Attribute;
+use crate::spec::AttributeInfo;
 use crate::spec::Classfile;
 use crate::spec::ConstantPoolEntry;
+use crate::spec::ElementValue;
+use crate::spec::ElementValuePair;
 use crate::spec::Field;
 use crate::spec::Method;
 use crate::spec::Version;
@@ -55,13 +61,19 @@ pub fn classfile_from_bytes(bytes: &[u8]) -> IResult<&[u8], Classfile> {
     let (input_7, interfaces) = length_count(be_u16, be_u16)(input_6)?;
 
     // parse fields
-    let (input_8, fields) = length_count(be_u16, field_from_bytes)(input_7)?;
+    let (input_8, fields) = length_count(be_u16, |bytes| {
+        field_from_bytes(bytes, constant_pool.as_slice())
+    })(input_7)?;
 
     // parse methods
-    let (input_9, methods) = length_count(be_u16, method_from_bytes)(input_8)?;
+    let (input_9, methods) = length_count(be_u16, |bytes| {
+        method_from_bytes(bytes, constant_pool.as_slice())
+    })(input_8)?;
 
     // parse attributes
-    let (input_10, attributes) = length_count(be_u16, attribute_from_bytes)(input_9)?;
+    let (input_10, attributes) = length_count(be_u16, |bytes| {
+        attribute_from_bytes(bytes, constant_pool.as_slice())
+    })(input_9)?;
 
     Ok((
         input_10,
@@ -79,8 +91,42 @@ pub fn classfile_from_bytes(bytes: &[u8]) -> IResult<&[u8], Classfile> {
     ))
 }
 
-fn attribute_from_bytes<'a>(bytes: &'a [u8]) -> IResult<&[u8], Attribute<'a>> {
-    todo!()
+fn annotation_from_bytes(
+    bytes: &[u8],
+) -> IResult<&[u8], Annotation> {
+    let (input_1, type_index) = be_u16(bytes)?;
+    let (input_2, element_value_pairs) = length_count(be_u16, element_value_pair_from_bytes)(input_1)?;
+
+    Ok((input_2, Annotation { type_index, element_value_pairs }))
+}
+
+fn attribute_from_bytes<'a>(
+    bytes: &'a [u8],
+    constant_pool: &[ConstantPoolEntry<'a>],
+) -> IResult<&'a [u8], Attribute<'a>> {
+    let (input_1, attribute_name_index) = be_u16(bytes)?;
+    let ConstantPoolEntry::Utf8 { bytes } = constant_pool[attribute_name_index as usize - 1] else {
+        return Err(Err::Failure(Error::new(bytes, ErrorKind::IsNot)));
+    };
+
+    // ignore length
+    let (input_2, _) = be_u32(input_1)?;
+
+    let Ok(utf8) = mutf8_to_utf8(bytes) else {
+        return Err(Err::Failure(Error::new(bytes, ErrorKind::Verify)));
+    };
+    let (input_3, info) = match utf8.to_str_lossy().as_ref() {
+        "AnnotationDefault" => attribute_annotation_default_from_bytes(input_2)?,
+        _ => return Err(Err::Failure(Error::new(bytes, ErrorKind::Tag))),
+    };
+
+    Ok((input_3, Attribute { info }))
+}
+
+fn attribute_annotation_default_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, element_value) = element_value_from_bytes(bytes)?;
+
+    Ok((input, AttributeInfo::AnnotationDefault { default_value: element_value }))
 }
 
 fn classfile_version_from_bytes(bytes: &[u8]) -> IResult<&[u8], Version> {
@@ -315,11 +361,56 @@ fn constant_pool_utf8_entry_from_bytes<'a>(
     Ok((input_2, ConstantPoolEntry::Utf8 { bytes: str_bytes }))
 }
 
-fn field_from_bytes<'a>(bytes: &'a [u8]) -> IResult<&[u8], Field<'a>> {
+fn element_value_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], ElementValue> {
+    let (input_1, tag) = be_u8(bytes)?;
+
+    Ok(match tag as char {
+        // byte or char or double or float or int or long or short or boolean or string
+        'B' | 'C' | 'D' | 'F' | 'I' | 'J' | 'S' | 'Z' | 's' => {
+            let (input_2, const_value_index) = be_u16(input_1)?;
+            (input_2, ElementValue::ConstValue(const_value_index))
+        }
+        // enum class
+        'e' => {
+            let (input_2, type_name_index) = be_u16(input_1)?;
+            let (input_3, const_name_index) = be_u16(input_2)?;
+            (input_3, ElementValue::EnumConst { type_name_index, const_name_index })
+        }
+        // class
+        'c' => {
+            let (input_2, class_info_index) = be_u16(input_1)?;
+            (input_2, ElementValue::ClassInfo(class_info_index))
+        }
+        // annotation interface
+        '@' => {
+            let (input_2, annotation) = annotation_from_bytes(input_1)?;
+            (input_2, ElementValue::Annotation(annotation))
+        }
+        // array type
+        '[' => {
+            let (input_2, values) = length_count(be_u16, element_value_from_bytes)(input_1)?;
+            (input_2, ElementValue::Array { values })
+        }
+        _ => return Err(Err::Failure(Error::new(bytes, ErrorKind::Tag))),
+    })
+}
+
+fn element_value_pair_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], ElementValuePair> {
+    let (input_1, element_name_index) = be_u16(bytes)?;
+    let (input_2, element_value) = element_value_from_bytes(input_1)?;
+
+    Ok((input_2, ElementValuePair { element_name_index, value: element_value }))
+}
+
+fn field_from_bytes<'a>(
+    bytes: &'a [u8],
+    constant_pool: &[ConstantPoolEntry<'a>],
+) -> IResult<&'a [u8], Field<'a>> {
     let (input_1, access_flags) = be_u16(bytes)?;
     let (input_2, name_index) = be_u16(input_1)?;
     let (input_3, descriptor_index) = be_u16(input_2)?;
-    let (input_4, attributes) = length_count(be_u16, attribute_from_bytes)(input_3)?;
+    let (input_4, attributes) =
+        length_count(be_u16, |bytes| attribute_from_bytes(bytes, constant_pool))(input_3)?;
 
     Ok((
         input_4,
@@ -332,11 +423,15 @@ fn field_from_bytes<'a>(bytes: &'a [u8]) -> IResult<&[u8], Field<'a>> {
     ))
 }
 
-fn method_from_bytes<'a>(bytes: &'a [u8]) -> IResult<&[u8], Method<'a>> {
+fn method_from_bytes<'a>(
+    bytes: &'a [u8],
+    constant_pool: &[ConstantPoolEntry<'a>],
+) -> IResult<&'a [u8], Method<'a>> {
     let (input_1, access_flags) = be_u16(bytes)?;
     let (input_2, name_index) = be_u16(input_1)?;
     let (input_3, descriptor_index) = be_u16(input_2)?;
-    let (input_4, attributes) = length_count(be_u16, attribute_from_bytes)(input_3)?;
+    let (input_4, attributes) =
+        length_count(be_u16, |bytes| attribute_from_bytes(bytes, constant_pool))(input_3)?;
 
     Ok((
         input_4,
