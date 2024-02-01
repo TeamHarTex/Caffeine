@@ -27,8 +27,8 @@ use nom::IResult;
 
 use crate::spec::Attribute;
 use crate::spec::Classfile;
-use crate::spec::Field;
 use crate::spec::ConstantPoolEntry;
+use crate::spec::Field;
 use crate::spec::Version;
 
 pub fn classfile_from_bytes(bytes: &[u8]) -> IResult<&[u8], Classfile> {
@@ -306,18 +306,19 @@ fn constant_pool_utf8_entry_from_bytes<'a>(
     Ok((input_2, ConstantPoolEntry::Utf8 { bytes: str_bytes }))
 }
 
-fn field_from_bytes<'a>(
-    bytes: &'a [u8],
-) -> IResult<&[u8], Field<'a>> {
+fn field_from_bytes<'a>(bytes: &'a [u8]) -> IResult<&[u8], Field<'a>> {
     let (input_1, access_flags) = be_u16(bytes)?;
     let (input_2, name_index) = be_u16(input_1)?;
     let (input_3, descriptor_index) = be_u16(input_2)?;
     let (input_4, attributes) = length_count(be_u16, attribute_from_bytes)(input_3)?;
 
-    Ok((input_4, Field {
-        access_flags,
-        name_index,
-        descriptor_index,
-        attributes,
-    }))
+    Ok((
+        input_4,
+        Field {
+            access_flags,
+            name_index,
+            descriptor_index,
+            attributes,
+        },
+    ))
 }
