@@ -45,6 +45,18 @@ pub enum AttributeInfo<'class> {
     LocalVariableTypeTable {
         local_variable_type_table: Vec<LocalVariableType>,
     },
+    RuntimeInvisibleAnnotations {
+        annotations: Vec<Annotation>,
+    },
+    RuntimeInvisibleParameterAnnotations {
+        parameter_annotations: Vec<Annotation>,
+    },
+    RuntimeVisibleAnnotations {
+        annotations: Vec<Annotation>,
+    },
+    RuntimeVisibleParameterAnnotations {
+        parameter_annotations: Vec<Annotation>,
+    },
     Signature {
         signature_index: u16,
     },
@@ -140,6 +152,19 @@ pub enum ConstantPoolEntry<'class> {
     },
 }
 
+pub enum ElementValue {
+    Annotation(Annotation),
+    ClassInfo(u16),
+    ConstValue(u16),
+    EnumConst {
+        type_name_index: u16,
+        const_name_index: u16,
+    },
+    Array {
+        values: Vec<ElementValue>
+    }
+}
+
 pub enum StackMapFrame {
     AppendFrame {
         offset_delta: u16,
@@ -197,6 +222,11 @@ pub struct Attribute<'class> {
     pub info: AttributeInfo<'class>,
 }
 
+pub struct Annotation {
+    pub type_index: u16,
+    pub element_value_pairs: Vec<ElementValuePair>,
+}
+
 pub struct Classfile<'a> {
     pub version: Version,
     pub constant_pool: Vec<ConstantPoolEntry<'a>>,
@@ -204,6 +234,11 @@ pub struct Classfile<'a> {
     pub this_class: u16,
     pub super_class: u16,
     pub interfaces: Vec<u16>,
+}
+
+pub struct ElementValuePair {
+    pub element_name_index: u16,
+    pub value: ElementValue,
 }
 
 pub struct ExceptionTableEntry {
