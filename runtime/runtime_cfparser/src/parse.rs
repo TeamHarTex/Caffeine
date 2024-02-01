@@ -25,7 +25,9 @@ use nom::number::complete::be_u8;
 use nom::Err;
 use nom::IResult;
 
+use crate::spec::Attribute;
 use crate::spec::Classfile;
+use crate::spec::Field;
 use crate::spec::ConstantPoolEntry;
 use crate::spec::Version;
 
@@ -51,6 +53,9 @@ pub fn classfile_from_bytes(bytes: &[u8]) -> IResult<&[u8], Classfile> {
     // parse interfaces
     let (input_7, interfaces) = length_count(be_u16, be_u16)(input_6)?;
 
+    // parse fields
+    let (input_8, fields) = length_count(be_u16, field_from_bytes)(input_7)?;
+
     Ok((
         input_3,
         Classfile {
@@ -60,8 +65,13 @@ pub fn classfile_from_bytes(bytes: &[u8]) -> IResult<&[u8], Classfile> {
             this_class,
             super_class,
             interfaces,
+            fields,
         },
     ))
+}
+
+fn attribute_from_bytes<'a>(bytes: &'a [u8]) -> IResult<&[u8], Attribute<'a>> {
+    todo!()
 }
 
 fn classfile_version_from_bytes(bytes: &[u8]) -> IResult<&[u8], Version> {
@@ -294,4 +304,20 @@ fn constant_pool_utf8_entry_from_bytes<'a>(
     let (input_2, str_bytes) = take(length as usize)(input_1)?;
 
     Ok((input_2, ConstantPoolEntry::Utf8 { bytes: str_bytes }))
+}
+
+fn field_from_bytes<'a>(
+    bytes: &'a [u8],
+) -> IResult<&[u8], Field<'a>> {
+    let (input_1, access_flags) = be_u16(bytes)?;
+    let (input_2, name_index) = be_u16(input_1)?;
+    let (input_3, descriptor_index) = be_u16(input_2)?;
+    let (input_4, attributes) = length_count(be_u16, attribute_from_bytes)(input_3)?;
+
+    Ok((input_4, Field {
+        access_flags,
+        name_index,
+        descriptor_index,
+        attributes,
+    }))
 }

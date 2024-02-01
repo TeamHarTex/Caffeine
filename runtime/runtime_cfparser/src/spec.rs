@@ -304,6 +304,7 @@ pub struct Classfile<'a> {
     pub this_class: u16,
     pub super_class: u16,
     pub interfaces: Vec<u16>,
+    pub fields: Vec<Field<'a>>,
 }
 
 pub struct ElementValuePair {
@@ -316,6 +317,27 @@ pub struct ExceptionTableEntry {
     pub end_pc: u16,
     pub handler_pc: u16,
     pub catch_type: u16,
+}
+
+pub struct Field<'a> {
+    pub access_flags: u16,
+    pub name_index: u16,
+    pub descriptor_index: u16,
+    pub attributes: Vec<Attribute<'a>>
+}
+
+pub struct FieldAccessFlags;
+
+impl FieldAccessFlags {
+    pub const PUBLIC: u16 = 0x0001;
+    pub const PRIVATE: u16 = 0x0002;
+    pub const PROTECTED: u16 = 0x0004;
+    pub const STATIC: u16 = 0x0008;
+    pub const FINAL: u16 = 0x0010;
+    pub const VOLATILE: u16 = 0x0040;
+    pub const TRANSIENT: u16 = 0x0080;
+    pub const SYNTHETIC: u16 = 0x1000;
+    pub const ENUM: u16 = 0x4000;
 }
 
 pub struct InnerClass {
@@ -366,16 +388,16 @@ pub struct ModuleExport<'a> {
 pub struct ModuleExportFlags;
 
 impl ModuleExportFlags {
-    pub const ACC_SYNTHETIC: u16 = 0x1000;
-    pub const ACC_MANDATED: u16 = 0x8000;
+    pub const SYNTHETIC: u16 = 0x1000;
+    pub const MANDATED: u16 = 0x8000;
 }
 
 pub struct ModuleFlags;
 
 impl ModuleFlags {
-    pub const ACC_OPEN: u16 = 0x0020;
-    pub const ACC_SYNTHETIC: u16 = 0x1000;
-    pub const ACC_MANDATED: u16 = 0x8000;
+    pub const OPEN: u16 = 0x0020;
+    pub const SYNTHETIC: u16 = 0x1000;
+    pub const MANDATED: u16 = 0x8000;
 }
 
 pub struct ModuleOpens<'a> {
@@ -387,8 +409,8 @@ pub struct ModuleOpens<'a> {
 pub struct ModuleOpensFlags;
 
 impl ModuleOpensFlags {
-    pub const ACC_SYNTHETIC: u16 = 0x1000;
-    pub const ACC_MANDATED: u16 = 0x8000;
+    pub const SYNTHETIC: u16 = 0x1000;
+    pub const MANDATED: u16 = 0x8000;
 }
 
 pub struct ModuleProvides<'a> {
@@ -405,10 +427,10 @@ pub struct ModuleRequire {
 pub struct ModuleRequireFlags;
 
 impl ModuleRequireFlags {
-    pub const ACC_TRANSITIVE: u16 = 0x0020;
-    pub const ACC_STATIC_PHASE: u16 = 0x0040;
-    pub const ACC_SYNTHETIC: u16 = 0x1000;
-    pub const ACC_MANDATED: u16 = 0x8000;
+    pub const TRANSITIVE: u16 = 0x0020;
+    pub const STATIC_PHASE: u16 = 0x0040;
+    pub const SYNTHETIC: u16 = 0x1000;
+    pub const MANDATED: u16 = 0x8000;
 }
 
 pub struct RecordComponent<'a> {
