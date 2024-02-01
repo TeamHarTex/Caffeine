@@ -25,7 +25,39 @@ pub enum AttributeInfo<'class> {
         exception_table: Vec<ExceptionTableEntry>,
         attributes: Vec<Attribute<'class>>,
     },
-    StackMapTable {},
+    Deprecated,
+    EnclosingMethod {
+        class_index: u16,
+        method_index: u16,
+    },
+    Exception {
+        exception_index_table: &'class [u16],
+    },
+    InnerClasses {
+        classes: Vec<InnerClass>,
+    },
+    LineNumberTable {
+        line_number_table: Vec<LineNumber>,
+    },
+    LocalVariableTable {
+        local_variable_table: Vec<LocalVariable>,
+    },
+    LocalVariableTypeTable {
+        local_variable_type_table: Vec<LocalVariableType>,
+    },
+    Signature {
+        signature_index: u16,
+    },
+    SourceDebugExtension {
+        debug_extension: &'class [u8],
+    },
+    SourceFile {
+        sourcefile_index: u16,
+    },
+    StackMapTable {
+        entries: Vec<StackMapFrame>,
+    },
+    Synthetic,
 }
 
 pub enum ConstantPoolEntry<'class> {
@@ -179,6 +211,34 @@ pub struct ExceptionTableEntry {
     pub end_pc: u16,
     pub handler_pc: u16,
     pub catch_type: u16,
+}
+
+pub struct InnerClass {
+    pub inner_class_info_index: u16,
+    pub outer_class_info_index: u16,
+    pub inner_name_index: u16,
+    pub inner_class_access_flags: u16,
+}
+
+pub struct LineNumber {
+    pub start_pc: u16,
+    pub line_number: u16,
+}
+
+pub struct LocalVariable {
+    pub start_pc: u16,
+    pub length: u16,
+    pub name_index: u16,
+    pub descriptor_index: u16,
+    pub index: u16,
+}
+
+pub struct LocalVariableType {
+    pub start_pc: u16,
+    pub length: u16,
+    pub name_index: u16,
+    pub descriptor_index: u16,
+    pub index: u16,
 }
 
 pub struct Version {
