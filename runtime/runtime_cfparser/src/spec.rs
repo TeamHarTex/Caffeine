@@ -305,6 +305,7 @@ pub struct Classfile<'a> {
     pub super_class: u16,
     pub interfaces: Vec<u16>,
     pub fields: Vec<Field<'a>>,
+    pub methods: Vec<Method<'a>>,
 }
 
 pub struct ElementValuePair {
@@ -372,6 +373,13 @@ pub struct LocalVariableType {
     pub name_index: u16,
     pub descriptor_index: u16,
     pub index: u16,
+}
+
+pub struct Method<'a> {
+    pub access_flags: u16,
+    pub name_index: u16,
+    pub descriptor_index: u16,
+    pub attributes: Vec<Attribute<'a>>,
 }
 
 pub struct MethodParameter {
