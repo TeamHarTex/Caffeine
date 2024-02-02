@@ -21,15 +21,15 @@ pub enum AttributeInfo<'class> {
     BootstrapMethods {
         bootstrap_methods: Vec<BootstrapMethod>,
     },
-    ConstantValue {
-        constantvalue_index: u16,
-    },
     Code {
         max_stack: u16,
         max_locals: u16,
         code: &'class [u8],
         exception_table: Vec<ExceptionTableEntry>,
         attributes: Vec<Attribute<'class>>,
+    },
+    ConstantValue {
+        constantvalue_index: u16,
     },
     Deprecated,
     EnclosingMethod {

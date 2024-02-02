@@ -17,14 +17,21 @@
 use std::borrow::Cow;
 
 pub trait CowExt<'a> {
-    fn to_str_lossy(self) -> Cow<'a, str>;
+    unsafe fn to_str_lossy(self) -> Cow<'a, str>;
 }
 
 impl<'a> CowExt<'a> for Cow<'a, [u8]> {
-    fn to_str_lossy(self) -> Cow<'a, str> {
+    unsafe fn to_str_lossy(self) -> Cow<'a, str> {
         match self {
             Cow::Borrowed(slice) => String::from_utf8_lossy(slice),
-            Cow::Owned(bytes) => String::from_utf8_lossy(&bytes),
+            Cow::Owned(bytes) => match String::from_utf8_lossy(&bytes) {
+                Cow::Borrowed(_) => unsafe {
+                    // SAFETY: caller guaranteed that the slice contains bytes of valid UTF-8
+                    String::from_utf8_unchecked(bytes)
+                }
+                .into(),
+                Cow::Owned(string) => string.into(),
+            },
         }
     }
 }

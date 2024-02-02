@@ -35,6 +35,7 @@ use crate::spec::Classfile;
 use crate::spec::ConstantPoolEntry;
 use crate::spec::ElementValue;
 use crate::spec::ElementValuePair;
+use crate::spec::ExceptionTableEntry;
 use crate::spec::Field;
 use crate::spec::Method;
 use crate::spec::Version;
@@ -92,13 +93,18 @@ pub fn classfile_from_bytes(bytes: &[u8]) -> IResult<&[u8], Classfile> {
     ))
 }
 
-fn annotation_from_bytes(
-    bytes: &[u8],
-) -> IResult<&[u8], Annotation> {
+fn annotation_from_bytes(bytes: &[u8]) -> IResult<&[u8], Annotation> {
     let (input_1, type_index) = be_u16(bytes)?;
-    let (input_2, element_value_pairs) = length_count(be_u16, element_value_pair_from_bytes)(input_1)?;
+    let (input_2, element_value_pairs) =
+        length_count(be_u16, element_value_pair_from_bytes)(input_1)?;
 
-    Ok((input_2, Annotation { type_index, element_value_pairs }))
+    Ok((
+        input_2,
+        Annotation {
+            type_index,
+            element_value_pairs,
+        },
+    ))
 }
 
 fn attribute_from_bytes<'a>(
@@ -116,11 +122,18 @@ fn attribute_from_bytes<'a>(
     let Ok(utf8) = mutf8_to_utf8(bytes) else {
         return Err(Err::Failure(Error::new(bytes, ErrorKind::Verify)));
     };
-    let (input_3, info) = match utf8.to_str_lossy().as_ref() {
-        "AnnotationDefault" => attribute_annotation_default_from_bytes(input_2)?,
-        "BootstrapMethods" => attribute_bootstrap_methods_from_bytes(input_2)?,
-        "ConstantValue" => attribute_constant_value_from_bytes(input_2)?,
-        _ => return Err(Err::Failure(Error::new(bytes, ErrorKind::Tag))),
+    let (input_3, info) = unsafe {
+        // SAFETY: the UTF-8 conversion above would have been failed if the MUTF-8 from Java cannot be converted
+        // into conventional UTF-8 and returned an error; it is guaranteed that at this point the slice contains
+        // bytes of valid UTF-8.
+        match utf8.to_str_lossy().as_ref() {
+            "AnnotationDefault" => attribute_annotation_default_from_bytes(input_2)?,
+            "BootstrapMethods" => attribute_bootstrap_methods_from_bytes(input_2)?,
+            "Code" => attribute_constant_code_from_bytes(input_2, constant_pool)?,
+            "ConstantValue" => attribute_constant_value_from_bytes(input_2)?,
+            "Deprecated" => (input_2, AttributeInfo::Deprecated),
+            _ => return Err(Err::Failure(Error::new(bytes, ErrorKind::Tag))),
+        }
     };
 
     Ok((input_3, Attribute { info }))
@@ -129,7 +142,12 @@ fn attribute_from_bytes<'a>(
 fn attribute_annotation_default_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo<'a>> {
     let (input, element_value) = element_value_from_bytes(bytes)?;
 
-    Ok((input, AttributeInfo::AnnotationDefault { default_value: element_value }))
+    Ok((
+        input,
+        AttributeInfo::AnnotationDefault {
+            default_value: element_value,
+        },
+    ))
 }
 
 fn attribute_bootstrap_methods_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo<'a>> {
@@ -138,17 +156,52 @@ fn attribute_bootstrap_methods_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], At
     Ok((input, AttributeInfo::BootstrapMethods { bootstrap_methods }))
 }
 
+fn attribute_constant_code_from_bytes<'a>(
+    bytes: &'a [u8],
+    constant_pool: &[ConstantPoolEntry<'a>],
+) -> IResult<&'a [u8], AttributeInfo<'a>> {
+    let (input_1, max_stack) = be_u16(bytes)?;
+    let (input_2, max_locals) = be_u16(input_1)?;
+    let (input_3, code_length) = be_u16(input_2)?;
+    let (input_4, code) = take(code_length as usize)(input_3)?;
+    let (input_5, exception_table) = exception_table_from_bytes(input_4)?;
+    let (input_6, attributes) =
+        length_count(be_u16, |bytes| attribute_from_bytes(bytes, constant_pool))(input_5)?;
+
+    Ok((
+        input_6,
+        AttributeInfo::Code {
+            max_stack,
+            max_locals,
+            code,
+            exception_table,
+            attributes,
+        },
+    ))
+}
+
 fn attribute_constant_value_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo<'a>> {
     let (input, constantvalue_index) = be_u16(bytes)?;
 
-    Ok((input, AttributeInfo::ConstantValue { constantvalue_index }))
+    Ok((
+        input,
+        AttributeInfo::ConstantValue {
+            constantvalue_index,
+        },
+    ))
 }
 
 fn bootstrap_method_from_bytes(bytes: &[u8]) -> IResult<&[u8], BootstrapMethod> {
     let (input_1, bootstrap_method_ref) = be_u16(bytes)?;
     let (input_2, bootstrap_arguments) = length_count(be_u16, be_u16)(input_1)?;
 
-    Ok((input_2, BootstrapMethod { bootstrap_method_ref, bootstrap_arguments }))
+    Ok((
+        input_2,
+        BootstrapMethod {
+            bootstrap_method_ref,
+            bootstrap_arguments,
+        },
+    ))
 }
 
 fn classfile_version_from_bytes(bytes: &[u8]) -> IResult<&[u8], Version> {
@@ -396,7 +449,13 @@ fn element_value_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], ElementValue> {
         'e' => {
             let (input_2, type_name_index) = be_u16(input_1)?;
             let (input_3, const_name_index) = be_u16(input_2)?;
-            (input_3, ElementValue::EnumConst { type_name_index, const_name_index })
+            (
+                input_3,
+                ElementValue::EnumConst {
+                    type_name_index,
+                    const_name_index,
+                },
+            )
         }
         // class
         'c' => {
@@ -421,7 +480,34 @@ fn element_value_pair_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], ElementValu
     let (input_1, element_name_index) = be_u16(bytes)?;
     let (input_2, element_value) = element_value_from_bytes(input_1)?;
 
-    Ok((input_2, ElementValuePair { element_name_index, value: element_value }))
+    Ok((
+        input_2,
+        ElementValuePair {
+            element_name_index,
+            value: element_value,
+        },
+    ))
+}
+
+fn exception_table_from_bytes(bytes: &[u8]) -> IResult<&[u8], Vec<ExceptionTableEntry>> {
+    length_count(be_u16, exception_table_entry_from_bytes)(bytes)
+}
+
+fn exception_table_entry_from_bytes(bytes: &[u8]) -> IResult<&[u8], ExceptionTableEntry> {
+    let (input_1, start_pc) = be_u16(bytes)?;
+    let (input_2, end_pc) = be_u16(input_1)?;
+    let (input_3, handler_pc) = be_u16(input_2)?;
+    let (input_4, catch_type) = be_u16(input_3)?;
+
+    Ok((
+        input_4,
+        ExceptionTableEntry {
+            start_pc,
+            end_pc,
+            handler_pc,
+            catch_type,
+        },
+    ))
 }
 
 fn field_from_bytes<'a>(
