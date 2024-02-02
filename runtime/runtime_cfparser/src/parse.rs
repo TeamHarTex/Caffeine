@@ -118,6 +118,7 @@ fn attribute_from_bytes<'a>(
     };
     let (input_3, info) = match utf8.to_str_lossy().as_ref() {
         "AnnotationDefault" => attribute_annotation_default_from_bytes(input_2)?,
+        "BootstrapMethods" => attribute_bootstrap_methods_from_bytes(input_2)?,
         _ => return Err(Err::Failure(Error::new(bytes, ErrorKind::Tag))),
     };
 
