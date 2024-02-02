@@ -119,6 +119,7 @@ fn attribute_from_bytes<'a>(
     let (input_3, info) = match utf8.to_str_lossy().as_ref() {
         "AnnotationDefault" => attribute_annotation_default_from_bytes(input_2)?,
         "BootstrapMethods" => attribute_bootstrap_methods_from_bytes(input_2)?,
+        "ConstantValue" => attribute_constant_value_from_bytes(input_2)?,
         _ => return Err(Err::Failure(Error::new(bytes, ErrorKind::Tag))),
     };
 
@@ -135,6 +136,12 @@ fn attribute_bootstrap_methods_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], At
     let (input, bootstrap_methods) = length_count(be_u16, bootstrap_method_from_bytes)(bytes)?;
 
     Ok((input, AttributeInfo::BootstrapMethods { bootstrap_methods }))
+}
+
+fn attribute_constant_value_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, constantvalue_index) = be_u16(bytes)?;
+
+    Ok((input, AttributeInfo::ConstantValue { constantvalue_index }))
 }
 
 fn bootstrap_method_from_bytes(bytes: &[u8]) -> IResult<&[u8], BootstrapMethod> {

@@ -37,7 +37,7 @@ pub enum AttributeInfo<'class> {
         method_index: u16,
     },
     Exception {
-        exception_index_table: &'class [u16],
+        exception_index_table: Vec<u16>,
     },
     InnerClasses {
         classes: Vec<InnerClass>,
@@ -62,23 +62,23 @@ pub enum AttributeInfo<'class> {
         requires: Vec<ModuleRequire>,
         exports: Vec<ModuleExport<'class>>,
         opens: Vec<ModuleOpens<'class>>,
-        uses: &'class [u16],
+        uses: Vec<u16>,
         provides: Vec<ModuleProvides<'class>>,
     },
     ModuleMainClass {
         main_class_index: u16,
     },
     ModulePackages {
-        package_index: &'class [u16],
+        package_index: Vec<u16>,
     },
     NestHost {
         host_class_index: u16,
     },
     NestMembers {
-        classes: &'class [u16],
+        classes: Vec<u16>,
     },
     PermittedSubclasses {
-        classes: &'class [u16],
+        classes: Vec<u16>,
     },
     Record {
         components: Vec<RecordComponent<'class>>,
