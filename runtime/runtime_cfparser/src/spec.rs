@@ -19,7 +19,7 @@ pub enum AttributeInfo<'class> {
         default_value: ElementValue,
     },
     BootstrapMethods {
-        bootstrap_methods: Vec<BootstrapMethod<'class>>,
+        bootstrap_methods: Vec<BootstrapMethod>,
     },
     ConstantValue {
         constantvalue_index: u16,
@@ -292,9 +292,9 @@ pub struct Annotation {
     pub element_value_pairs: Vec<ElementValuePair>,
 }
 
-pub struct BootstrapMethod<'a> {
+pub struct BootstrapMethod {
     pub bootstrap_method_ref: u16,
-    pub bootstrap_arguments: &'a [u16],
+    pub bootstrap_arguments: Vec<u16>,
 }
 
 pub struct Classfile<'a> {

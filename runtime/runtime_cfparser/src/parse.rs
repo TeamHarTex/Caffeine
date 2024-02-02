@@ -30,6 +30,7 @@ use crate::cowext::CowExt;
 use crate::spec::Annotation;
 use crate::spec::Attribute;
 use crate::spec::AttributeInfo;
+use crate::spec::BootstrapMethod;
 use crate::spec::Classfile;
 use crate::spec::ConstantPoolEntry;
 use crate::spec::ElementValue;
@@ -127,6 +128,19 @@ fn attribute_annotation_default_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], A
     let (input, element_value) = element_value_from_bytes(bytes)?;
 
     Ok((input, AttributeInfo::AnnotationDefault { default_value: element_value }))
+}
+
+fn attribute_bootstrap_methods_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, bootstrap_methods) = length_count(be_u16, bootstrap_method_from_bytes)(bytes)?;
+
+    Ok((input, AttributeInfo::BootstrapMethods { bootstrap_methods }))
+}
+
+fn bootstrap_method_from_bytes(bytes: &[u8]) -> IResult<&[u8], BootstrapMethod> {
+    let (input_1, bootstrap_method_ref) = be_u16(bytes)?;
+    let (input_2, bootstrap_arguments) = length_count(be_u16, be_u16)(input_1)?;
+
+    Ok((input_2, BootstrapMethod { bootstrap_method_ref, bootstrap_arguments }))
 }
 
 fn classfile_version_from_bytes(bytes: &[u8]) -> IResult<&[u8], Version> {
