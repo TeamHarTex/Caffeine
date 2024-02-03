@@ -129,9 +129,10 @@ fn attribute_from_bytes<'a>(
         match utf8.to_str_lossy().as_ref() {
             "AnnotationDefault" => attribute_annotation_default_from_bytes(input_2)?,
             "BootstrapMethods" => attribute_bootstrap_methods_from_bytes(input_2)?,
-            "Code" => attribute_constant_code_from_bytes(input_2, constant_pool)?,
+            "Code" => attribute_code_from_bytes(input_2, constant_pool)?,
             "ConstantValue" => attribute_constant_value_from_bytes(input_2)?,
             "Deprecated" => (input_2, AttributeInfo::Deprecated),
+            "EnclosingMethod" => attribute_enclosing_method_from_bytes(input_2)?,
             _ => return Err(Err::Failure(Error::new(bytes, ErrorKind::Tag))),
         }
     };
@@ -156,7 +157,7 @@ fn attribute_bootstrap_methods_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], At
     Ok((input, AttributeInfo::BootstrapMethods { bootstrap_methods }))
 }
 
-fn attribute_constant_code_from_bytes<'a>(
+fn attribute_code_from_bytes<'a>(
     bytes: &'a [u8],
     constant_pool: &[ConstantPoolEntry<'a>],
 ) -> IResult<&'a [u8], AttributeInfo<'a>> {
@@ -187,6 +188,19 @@ fn attribute_constant_value_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], Attri
         input,
         AttributeInfo::ConstantValue {
             constantvalue_index,
+        },
+    ))
+}
+
+fn attribute_enclosing_method_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input_1, class_index) = be_u16(bytes)?;
+    let (input_2, method_index) = be_u16(input_1)?;
+
+    Ok((
+        input_2,
+        AttributeInfo::EnclosingMethod {
+            class_index,
+            method_index,
         },
     ))
 }
