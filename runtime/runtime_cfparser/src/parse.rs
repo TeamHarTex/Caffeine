@@ -27,6 +27,7 @@ use nom::Err;
 use nom::IResult;
 
 use crate::cowext::CowExt;
+use crate::spec::Annotation;
 use crate::spec::Attribute;
 use crate::spec::AttributeInfo;
 use crate::spec::BootstrapMethod;
@@ -36,9 +37,10 @@ use crate::spec::ElementValue;
 use crate::spec::ElementValuePair;
 use crate::spec::ExceptionTableEntry;
 use crate::spec::Field;
+use crate::spec::InnerClass;
+use crate::spec::LineNumber;
 use crate::spec::Method;
 use crate::spec::Version;
-use crate::spec::{Annotation, InnerClass};
 
 pub fn classfile_from_bytes(bytes: &[u8]) -> IResult<&[u8], Classfile> {
     // make sure the magic bytes are there, to indicate a valid Java classfile
@@ -135,6 +137,7 @@ fn attribute_from_bytes<'a>(
             "EnclosingMethod" => attribute_enclosing_method_from_bytes(input_2)?,
             "Exceptions" => attribute_exceptions_from_bytes(input_2)?,
             "InnerClasses" => attribute_inner_classes_from_bytes(input_2)?,
+            "LineNumberTable" => attribute_line_number_table_from_bytes(input_2)?,
             _ => return Err(Err::Failure(Error::new(bytes, ErrorKind::Tag))),
         }
     };
@@ -222,6 +225,12 @@ fn attribute_inner_classes_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], Attrib
     let (input, classes) = length_count(be_u16, inner_class_from_bytes)(bytes)?;
 
     Ok((input, AttributeInfo::InnerClasses { classes }))
+}
+
+fn attribute_line_number_table_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, line_number_table) = length_count(be_u16, line_number_from_bytes)(bytes)?;
+
+    Ok((input, AttributeInfo::LineNumberTable { line_number_table }))
 }
 
 fn bootstrap_method_from_bytes(bytes: &[u8]) -> IResult<&[u8], BootstrapMethod> {
@@ -577,6 +586,19 @@ fn inner_class_from_bytes(bytes: &[u8]) -> IResult<&[u8], InnerClass> {
             outer_class_info_index,
             inner_name_index,
             inner_class_access_flags,
+        },
+    ))
+}
+
+fn line_number_from_bytes(bytes: &[u8]) -> IResult<&[u8], LineNumber> {
+    let (input_1, start_pc) = be_u16(bytes)?;
+    let (input_2, line_number) = be_u16(input_1)?;
+
+    Ok((
+        input_2,
+        LineNumber {
+            start_pc,
+            line_number,
         },
     ))
 }
