@@ -133,6 +133,7 @@ fn attribute_from_bytes<'a>(
             "ConstantValue" => attribute_constant_value_from_bytes(input_2)?,
             "Deprecated" => (input_2, AttributeInfo::Deprecated),
             "EnclosingMethod" => attribute_enclosing_method_from_bytes(input_2)?,
+            "Exceptions" => attribute_exceptions_from_bytes(input_2)?,
             _ => return Err(Err::Failure(Error::new(bytes, ErrorKind::Tag))),
         }
     };
@@ -201,6 +202,17 @@ fn attribute_enclosing_method_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], Att
         AttributeInfo::EnclosingMethod {
             class_index,
             method_index,
+        },
+    ))
+}
+
+fn attribute_exceptions_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, exception_index_table) = length_count(be_u16, be_u16)(bytes)?;
+
+    Ok((
+        input,
+        AttributeInfo::Exceptions {
+            exception_index_table,
         },
     ))
 }

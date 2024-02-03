@@ -36,7 +36,7 @@ pub enum AttributeInfo<'class> {
         class_index: u16,
         method_index: u16,
     },
-    Exception {
+    Exceptions {
         exception_index_table: Vec<u16>,
     },
     InnerClasses {
