@@ -42,6 +42,7 @@ use crate::spec::LineNumber;
 use crate::spec::LocalVariable;
 use crate::spec::LocalVariableType;
 use crate::spec::Method;
+use crate::spec::MethodParameter;
 use crate::spec::Version;
 
 pub fn classfile_from_bytes(bytes: &[u8]) -> IResult<&[u8], Classfile> {
@@ -142,7 +143,7 @@ fn attribute_from_bytes<'a>(
             "LineNumberTable" => attribute_line_number_table_from_bytes(input_2)?,
             "LocalVariableTable" => attribute_local_variable_table_from_bytes(input_2)?,
             "LocalVariableTypeTable" => attribute_local_variable_type_table_from_bytes(input_2)?,
-            "MethodParameters" => todo!(),
+            "MethodParameters" => attribute_method_parameters_from_bytes(input_2)?,
             "Module" => todo!(),
             "ModuleMainClass" => todo!(),
             "ModulePackages" => todo!(),
@@ -280,6 +281,12 @@ fn attribute_local_variable_type_table_from_bytes<'a>(
             local_variable_type_table,
         },
     ))
+}
+
+fn attribute_method_parameters_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, parameters) = length_count(be_u16, method_parameter_from_bytes)(bytes)?;
+
+    Ok((input, AttributeInfo::MethodParameters { parameters }))
 }
 
 fn bootstrap_method_from_bytes(bytes: &[u8]) -> IResult<&[u8], BootstrapMethod> {
@@ -710,6 +717,19 @@ fn method_from_bytes<'a>(
             name_index,
             descriptor_index,
             attributes,
+        },
+    ))
+}
+
+fn method_parameter_from_bytes(bytes: &[u8]) -> IResult<&[u8], MethodParameter> {
+    let (input_1, name_index) = be_u16(bytes)?;
+    let (input_2, access_flags) = be_u16(input_1)?;
+
+    Ok((
+        input_2,
+        MethodParameter {
+            name_index,
+            access_flags,
         },
     ))
 }
