@@ -40,6 +40,7 @@ use crate::spec::Field;
 use crate::spec::InnerClass;
 use crate::spec::LineNumber;
 use crate::spec::LocalVariable;
+use crate::spec::LocalVariableType;
 use crate::spec::Method;
 use crate::spec::Version;
 
@@ -140,6 +141,7 @@ fn attribute_from_bytes<'a>(
             "InnerClasses" => attribute_inner_classes_from_bytes(input_2)?,
             "LineNumberTable" => attribute_line_number_table_from_bytes(input_2)?,
             "LocalVariableTable" => attribute_local_variable_table_from_bytes(input_2)?,
+            "LocalVariableTypeTable" => attribute_local_variable_type_table_from_bytes(input_2)?,
             _ => return Err(Err::Failure(Error::new(bytes, ErrorKind::Tag))),
         }
     };
@@ -248,6 +250,20 @@ fn attribute_local_variable_table_from_bytes<'a>(
     ))
 }
 
+fn attribute_local_variable_type_table_from_bytes<'a>(
+    bytes: &[u8],
+) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, local_variable_type_table) =
+        length_count(be_u16, local_variable_type_from_bytes)(bytes)?;
+
+    Ok((
+        input,
+        AttributeInfo::LocalVariableTypeTable {
+            local_variable_type_table,
+        },
+    ))
+}
+
 fn bootstrap_method_from_bytes(bytes: &[u8]) -> IResult<&[u8], BootstrapMethod> {
     let (input_1, bootstrap_method_ref) = be_u16(bytes)?;
     let (input_2, bootstrap_arguments) = length_count(be_u16, be_u16)(input_1)?;
@@ -310,8 +326,7 @@ fn constant_pool_double_entry_from_bytes<'a>(
     Ok((
         input_2,
         ConstantPoolEntry::Double {
-            high_bytes,
-            low_bytes,
+            value: f64::from_bits((high_bytes as u64) << 32 + low_bytes as u64),
         },
     ))
 }
@@ -336,7 +351,12 @@ fn constant_pool_float_entry_from_bytes<'a>(
 ) -> IResult<&[u8], ConstantPoolEntry<'a>> {
     let (input, float) = be_u32(bytes)?;
 
-    Ok((input, ConstantPoolEntry::Float { bytes: float }))
+    Ok((
+        input,
+        ConstantPoolEntry::Float {
+            value: f32::from_bits(float),
+        },
+    ))
 }
 
 fn constant_pool_field_ref_entry_from_bytes<'a>(
@@ -401,8 +421,7 @@ fn constant_pool_long_entry_from_bytes<'a>(
     Ok((
         input_2,
         ConstantPoolEntry::Long {
-            high_bytes,
-            low_bytes,
+            value: (high_bytes as u64) << 32 + low_bytes as u64,
         },
     ))
 }
@@ -628,6 +647,25 @@ fn local_variable_from_bytes(bytes: &[u8]) -> IResult<&[u8], LocalVariable> {
     Ok((
         input_5,
         LocalVariable {
+            start_pc,
+            length,
+            name_index,
+            descriptor_index,
+            index,
+        },
+    ))
+}
+
+fn local_variable_type_from_bytes(bytes: &[u8]) -> IResult<&[u8], LocalVariableType> {
+    let (input_1, start_pc) = be_u16(bytes)?;
+    let (input_2, length) = be_u16(input_1)?;
+    let (input_3, name_index) = be_u16(input_2)?;
+    let (input_4, descriptor_index) = be_u16(input_3)?;
+    let (input_5, index) = be_u16(input_4)?;
+
+    Ok((
+        input_5,
+        LocalVariableType {
             start_pc,
             length,
             name_index,
