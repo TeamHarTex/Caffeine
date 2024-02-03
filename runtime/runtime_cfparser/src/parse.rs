@@ -39,6 +39,7 @@ use crate::spec::ExceptionTableEntry;
 use crate::spec::Field;
 use crate::spec::InnerClass;
 use crate::spec::LineNumber;
+use crate::spec::LocalVariable;
 use crate::spec::Method;
 use crate::spec::Version;
 
@@ -138,6 +139,7 @@ fn attribute_from_bytes<'a>(
             "Exceptions" => attribute_exceptions_from_bytes(input_2)?,
             "InnerClasses" => attribute_inner_classes_from_bytes(input_2)?,
             "LineNumberTable" => attribute_line_number_table_from_bytes(input_2)?,
+            "LocalVariableTable" => attribute_local_variable_table_from_bytes(input_2)?,
             _ => return Err(Err::Failure(Error::new(bytes, ErrorKind::Tag))),
         }
     };
@@ -231,6 +233,19 @@ fn attribute_line_number_table_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], At
     let (input, line_number_table) = length_count(be_u16, line_number_from_bytes)(bytes)?;
 
     Ok((input, AttributeInfo::LineNumberTable { line_number_table }))
+}
+
+fn attribute_local_variable_table_from_bytes<'a>(
+    bytes: &[u8],
+) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, local_variable_table) = length_count(be_u16, local_variable_from_bytes)(bytes)?;
+
+    Ok((
+        input,
+        AttributeInfo::LocalVariableTable {
+            local_variable_table,
+        },
+    ))
 }
 
 fn bootstrap_method_from_bytes(bytes: &[u8]) -> IResult<&[u8], BootstrapMethod> {
@@ -599,6 +614,25 @@ fn line_number_from_bytes(bytes: &[u8]) -> IResult<&[u8], LineNumber> {
         LineNumber {
             start_pc,
             line_number,
+        },
+    ))
+}
+
+fn local_variable_from_bytes(bytes: &[u8]) -> IResult<&[u8], LocalVariable> {
+    let (input_1, start_pc) = be_u16(bytes)?;
+    let (input_2, length) = be_u16(input_1)?;
+    let (input_3, name_index) = be_u16(input_2)?;
+    let (input_4, descriptor_index) = be_u16(input_3)?;
+    let (input_5, index) = be_u16(input_4)?;
+
+    Ok((
+        input_5,
+        LocalVariable {
+            start_pc,
+            length,
+            name_index,
+            descriptor_index,
+            index,
         },
     ))
 }
