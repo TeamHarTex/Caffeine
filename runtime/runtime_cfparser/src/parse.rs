@@ -27,7 +27,6 @@ use nom::Err;
 use nom::IResult;
 
 use crate::cowext::CowExt;
-use crate::spec::Annotation;
 use crate::spec::Attribute;
 use crate::spec::AttributeInfo;
 use crate::spec::BootstrapMethod;
@@ -39,6 +38,7 @@ use crate::spec::ExceptionTableEntry;
 use crate::spec::Field;
 use crate::spec::Method;
 use crate::spec::Version;
+use crate::spec::{Annotation, InnerClass};
 
 pub fn classfile_from_bytes(bytes: &[u8]) -> IResult<&[u8], Classfile> {
     // make sure the magic bytes are there, to indicate a valid Java classfile
@@ -134,6 +134,7 @@ fn attribute_from_bytes<'a>(
             "Deprecated" => (input_2, AttributeInfo::Deprecated),
             "EnclosingMethod" => attribute_enclosing_method_from_bytes(input_2)?,
             "Exceptions" => attribute_exceptions_from_bytes(input_2)?,
+            "InnerClasses" => attribute_inner_classes_from_bytes(input_2)?,
             _ => return Err(Err::Failure(Error::new(bytes, ErrorKind::Tag))),
         }
     };
@@ -215,6 +216,12 @@ fn attribute_exceptions_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], Attribute
             exception_index_table,
         },
     ))
+}
+
+fn attribute_inner_classes_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, classes) = length_count(be_u16, inner_class_from_bytes)(bytes)?;
+
+    Ok((input, AttributeInfo::InnerClasses { classes }))
 }
 
 fn bootstrap_method_from_bytes(bytes: &[u8]) -> IResult<&[u8], BootstrapMethod> {
@@ -553,6 +560,23 @@ fn field_from_bytes<'a>(
             name_index,
             descriptor_index,
             attributes,
+        },
+    ))
+}
+
+fn inner_class_from_bytes(bytes: &[u8]) -> IResult<&[u8], InnerClass> {
+    let (input_1, inner_class_info_index) = be_u16(bytes)?;
+    let (input_2, outer_class_info_index) = be_u16(input_1)?;
+    let (input_3, inner_name_index) = be_u16(input_2)?;
+    let (input_4, inner_class_access_flags) = be_u16(input_3)?;
+
+    Ok((
+        input_4,
+        InnerClass {
+            inner_class_info_index,
+            outer_class_info_index,
+            inner_name_index,
+            inner_class_access_flags,
         },
     ))
 }
