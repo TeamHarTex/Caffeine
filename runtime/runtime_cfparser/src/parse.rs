@@ -150,7 +150,7 @@ fn attribute_from_bytes<'a>(
             "MethodParameters" => attribute_method_parameters_from_bytes(input_2)?,
             "Module" => attribute_module_from_bytes(input_2)?,
             "ModuleMainClass" => attribute_module_main_class_from_bytes(input_2)?,
-            "ModulePackages" => todo!(),
+            "ModulePackages" => attribute_module_packages_from_bytes(input_2)?,
             "NestHost" => todo!(),
             "NestMembers" => todo!(),
             "PermittedSubclasses" => todo!(),
@@ -289,6 +289,12 @@ fn attribute_module_main_class_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], At
     let (input, main_class_index) = be_u16(bytes)?;
 
     Ok((input, AttributeInfo::ModuleMainClass { main_class_index }))
+}
+
+fn attribute_module_packages_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, package_index) = length_count(be_u16, be_u16)(bytes)?;
+
+    Ok((input, AttributeInfo::ModulePackages { package_index }))
 }
 
 fn attribute_local_variable_table_from_bytes<'a>(
