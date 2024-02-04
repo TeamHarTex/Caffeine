@@ -162,7 +162,7 @@ fn attribute_from_bytes<'a>(
             "PermittedSubclasses" => attribute_permitted_subclasses_from_bytes(input_2)?,
             "Record" => attribute_record_from_bytes(input_2, constant_pool)?,
             "RuntimeInvisibleAnnotations" => {
-                attribute_runtime_invisible_annotations_from_bytes(input_2)
+                attribute_runtime_invisible_annotations_from_bytes(input_2)?
             }
             "RuntimeInvisibleParameterAnnotations" => {
                 attribute_runtime_invisible_parameter_annotations_from_bytes(input_2)?
@@ -171,7 +171,7 @@ fn attribute_from_bytes<'a>(
                 attribute_runtime_invisible_type_annotations_from_bytes(input_2)?
             }
             "RuntimeVisibleAnnotations" => {
-                attribute_runtime_visible_annotations_from_bytes(input_2)
+                attribute_runtime_visible_annotations_from_bytes(input_2)?
             }
             "RuntimeVisibleParameterAnnotations" => {
                 attribute_runtime_visible_parameter_annotations_from_bytes(input_2)?
@@ -179,6 +179,7 @@ fn attribute_from_bytes<'a>(
             "RuntimeVisibleTypeAnnotations" => {
                 attribute_runtime_visible_type_annotations_from_bytes(input_2)?
             }
+            "Signature" => attribute_signature_from_bytes(input_2)?,
             "SourceDebugExtension" => todo!(),
             "SourceFile" => todo!(),
             "StackMapTable" => todo!(),
@@ -447,6 +448,12 @@ fn attribute_runtime_visible_type_annotations_from_bytes<'a>(
         input,
         AttributeInfo::RuntimeVisibleTypeAnnotations { type_annotations },
     ))
+}
+
+fn attribute_signature_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, signature_index) = be_u16(bytes)?;
+
+    Ok((input, AttributeInfo::Signature { signature_index }))
 }
 
 fn bootstrap_method_from_bytes(bytes: &[u8]) -> IResult<&[u8], BootstrapMethod> {
@@ -1010,7 +1017,7 @@ fn target_info_from_bytes(bytes: &[u8], target_type: u8) -> IResult<&[u8], Targe
                 },
             )
         }
-        0x13 | 0x14 | 0x15 => TargetInfo::Empty,
+        0x13 | 0x14 | 0x15 => (bytes, TargetInfo::Empty),
         0x16 => {
             let (input, formal_parameter_index) = be_u8(bytes)?;
 
@@ -1038,7 +1045,7 @@ fn target_info_from_bytes(bytes: &[u8], target_type: u8) -> IResult<&[u8], Targe
         }
         0x47 | 0x48 | 0x49 | 0x4A | 0x4B => {
             let (input_1, offset) = be_u16(bytes)?;
-            let (input_2, type_argument_index) = be_u16(input_1)?;
+            let (input_2, type_argument_index) = be_u8(input_1)?;
 
             (
                 input_2,
