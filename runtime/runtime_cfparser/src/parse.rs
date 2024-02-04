@@ -159,7 +159,9 @@ fn attribute_from_bytes<'a>(
             "RuntimeInvisibleAnnotations" => {
                 attribute_runtime_invisible_annotations_from_bytes(input_2)
             }
-            "RuntimeInvisibleParameterAnnotations" => todo!(),
+            "RuntimeInvisibleParameterAnnotations" => {
+                attribute_runtime_invisible_parameter_annotations_from_bytes(input_2)?
+            }
             "RuntimeInvisibleTypeAnnotations" => todo!(),
             "RuntimeVisibleAnnotations" => todo!(),
             "RuntimeVisibleParameterAnnotations" => todo!(),
@@ -372,6 +374,19 @@ fn attribute_runtime_invisible_annotations_from_bytes<'a>(
     Ok((
         input,
         AttributeInfo::RuntimeInvisibleAnnotations { annotations },
+    ))
+}
+
+fn attribute_runtime_invisible_parameter_annotations_from_bytes<'a>(
+    bytes: &[u8],
+) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, parameter_annotations) = length_count(be_u16, annotation_from_bytes)(bytes)?;
+
+    Ok((
+        input,
+        AttributeInfo::RuntimeInvisibleParameterAnnotations {
+            parameter_annotations,
+        },
     ))
 }
 
