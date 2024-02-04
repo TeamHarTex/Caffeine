@@ -47,6 +47,7 @@ use crate::spec::ModuleExports;
 use crate::spec::ModuleOpens;
 use crate::spec::ModuleProvides;
 use crate::spec::ModuleRequires;
+use crate::spec::RecordComponent;
 use crate::spec::Version;
 
 pub fn classfile_from_bytes(bytes: &[u8]) -> IResult<&[u8], Classfile> {
@@ -154,7 +155,7 @@ fn attribute_from_bytes<'a>(
             "NestHost" => attribute_nest_host_from_bytes(input_2)?,
             "NestMembers" => attribute_nest_members_from_bytes(input_2)?,
             "PermittedSubclasses" => attribute_permitted_subclasses_from_bytes(input_2)?,
-            "Record" => todo!(),
+            "Record" => attribute_record_from_bytes(input_2, constant_pool)?,
             "RuntimeInvisibleAnnotations" => todo!(),
             "RuntimeInvisibleParameterAnnotations" => todo!(),
             "RuntimeInvisibleTypeAnnotations" => todo!(),
@@ -348,6 +349,17 @@ fn attribute_permitted_subclasses_from_bytes<'a>(
     let (input, classes) = length_count(be_u16, be_u16)(bytes)?;
 
     Ok((input, AttributeInfo::PermittedSubclasses { classes }))
+}
+
+fn attribute_record_from_bytes<'a>(
+    bytes: &'a [u8],
+    constant_pool: &[ConstantPoolEntry<'a>],
+) -> IResult<&'a [u8], AttributeInfo<'a>> {
+    let (input, components) = length_count(be_u16, |bytes| {
+        record_component_from_bytes(bytes, constant_pool)
+    })(bytes)?;
+
+    Ok((input, AttributeInfo::Record { components }))
 }
 
 fn bootstrap_method_from_bytes(bytes: &[u8]) -> IResult<&[u8], BootstrapMethod> {
@@ -827,7 +839,7 @@ fn module_opens_from_bytes(bytes: &[u8]) -> IResult<&[u8], ModuleOpens> {
 
 fn module_provides_from_bytes(bytes: &[u8]) -> IResult<&[u8], ModuleProvides> {
     let (input_1, provides_index) = be_u16(bytes)?;
-    let (input_2, provides_with_indices) = be_u16(input_1)?;
+    let (input_2, provides_with_indices) = length_count(be_u16, be_u16)(input_1)?;
 
     Ok((
         input_2,
@@ -849,6 +861,25 @@ fn module_require_from_bytes(bytes: &[u8]) -> IResult<&[u8], ModuleRequires> {
             requires_index,
             requires_flags,
             requires_version_index,
+        },
+    ))
+}
+
+fn record_component_from_bytes<'a>(
+    bytes: &'a [u8],
+    constant_pool: &[ConstantPoolEntry<'a>],
+) -> IResult<&'a [u8], RecordComponent<'a>> {
+    let (input_1, name_index) = be_u16(bytes)?;
+    let (input_2, descriptor_index) = be_u16(input_1)?;
+    let (input_3, attributes) =
+        length_count(be_u16, |bytes| attribute_from_bytes(bytes, constant_pool))(input_2)?;
+
+    Ok((
+        input_3,
+        RecordComponent {
+            name_index,
+            descriptor_index,
+            attributes,
         },
     ))
 }
