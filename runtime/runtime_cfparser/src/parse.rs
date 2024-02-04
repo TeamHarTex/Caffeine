@@ -152,7 +152,7 @@ fn attribute_from_bytes<'a>(
             "ModuleMainClass" => attribute_module_main_class_from_bytes(input_2)?,
             "ModulePackages" => attribute_module_packages_from_bytes(input_2)?,
             "NestHost" => attribute_nest_host_from_bytes(input_2)?,
-            "NestMembers" => todo!(),
+            "NestMembers" => attribute_nest_members_from_bytes(input_2)?,
             "PermittedSubclasses" => todo!(),
             "Record" => todo!(),
             "RuntimeInvisibleAnnotations" => todo!(),
@@ -334,6 +334,12 @@ fn attribute_nest_host_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeI
     let (input, host_class_index) = be_u16(bytes)?;
 
     Ok((input, AttributeInfo::NestHost { host_class_index }))
+}
+
+fn attribute_nest_members_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, classes) = length_count(be_u16, be_u16)(bytes)?;
+
+    Ok((input, AttributeInfo::NestMembers { classes }))
 }
 
 fn bootstrap_method_from_bytes(bytes: &[u8]) -> IResult<&[u8], BootstrapMethod> {
