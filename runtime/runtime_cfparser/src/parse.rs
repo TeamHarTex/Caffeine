@@ -131,8 +131,7 @@ fn attribute_from_bytes<'a>(
         return Err(Err::Failure(Error::new(bytes, ErrorKind::IsNot)));
     };
 
-    // ignore length
-    let (input_2, _) = be_u32(input_1)?;
+    let (input_2, length) = be_u32(input_1)?;
 
     let Ok(utf8) = mutf8_to_utf8(bytes) else {
         return Err(Err::Failure(Error::new(bytes, ErrorKind::Verify)));
@@ -180,7 +179,7 @@ fn attribute_from_bytes<'a>(
                 attribute_runtime_visible_type_annotations_from_bytes(input_2)?
             }
             "Signature" => attribute_signature_from_bytes(input_2)?,
-            "SourceDebugExtension" => todo!(),
+            "SourceDebugExtension" => attribute_source_debug_extension_from_bytes(input_2, length)?,
             "SourceFile" => todo!(),
             "StackMapTable" => todo!(),
             "Synthetic" => todo!(),
@@ -454,6 +453,18 @@ fn attribute_signature_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeI
     let (input, signature_index) = be_u16(bytes)?;
 
     Ok((input, AttributeInfo::Signature { signature_index }))
+}
+
+fn attribute_source_debug_extension_from_bytes<'a>(
+    bytes: &'a [u8],
+    length: u32,
+) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, debug_extension) = take(length as usize)(bytes)?;
+
+    Ok((
+        input,
+        AttributeInfo::SourceDebugExtension { debug_extension },
+    ))
 }
 
 fn bootstrap_method_from_bytes(bytes: &[u8]) -> IResult<&[u8], BootstrapMethod> {
