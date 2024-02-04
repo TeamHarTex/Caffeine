@@ -14,6 +14,6 @@
  * limitations under the License.
  */
 
-module java.base {
-    exports java.io;
-}
+package java.io;
+
+public interface Serializable {}
