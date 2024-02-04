@@ -19,6 +19,7 @@ use nom::bytes::complete::tag;
 use nom::bytes::complete::take;
 use nom::error::Error;
 use nom::error::ErrorKind;
+use nom::multi::count;
 use nom::multi::length_count;
 use nom::number::complete::be_u16;
 use nom::number::complete::be_u32;
@@ -49,10 +50,12 @@ use crate::spec::ModuleOpens;
 use crate::spec::ModuleProvides;
 use crate::spec::ModuleRequires;
 use crate::spec::RecordComponent;
+use crate::spec::StackMapFrame;
 use crate::spec::TargetInfo;
 use crate::spec::TypeAnnotation;
 use crate::spec::TypePath;
 use crate::spec::TypePathSegment;
+use crate::spec::VerificationTypeInfo;
 use crate::spec::Version;
 
 pub fn classfile_from_bytes(bytes: &[u8]) -> IResult<&[u8], Classfile> {
@@ -181,7 +184,7 @@ fn attribute_from_bytes<'a>(
             "Signature" => attribute_signature_from_bytes(input_2)?,
             "SourceDebugExtension" => attribute_source_debug_extension_from_bytes(input_2, length)?,
             "SourceFile" => attribute_source_file_from_bytes(input_2)?,
-            "StackMapTable" => todo!(),
+            "StackMapTable" => attribute_stack_map_table_from_bytes(input_2)?,
             "Synthetic" => todo!(),
             _ => return Err(Err::Failure(Error::new(bytes, ErrorKind::Tag))),
         }
@@ -471,6 +474,12 @@ fn attribute_source_file_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], Attribut
     let (input, sourcefile_index) = be_u16(bytes)?;
 
     Ok((input, AttributeInfo::SourceFile { sourcefile_index }))
+}
+
+fn attribute_stack_map_table_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, entries) = length_count(be_u16, stack_map_frame_from_bytes)(bytes)?;
+
+    Ok((input, AttributeInfo::StackMapTable { entries }))
 }
 
 fn bootstrap_method_from_bytes(bytes: &[u8]) -> IResult<&[u8], BootstrapMethod> {
@@ -1010,6 +1019,71 @@ fn record_component_from_bytes<'a>(
     ))
 }
 
+fn stack_map_frame_from_bytes(bytes: &[u8]) -> IResult<&[u8], StackMapFrame> {
+    let (input_1, tag) = be_u8(bytes)?;
+
+    Ok(match tag {
+        0..=63 => (input_1, StackMapFrame::SameFrame),
+        64..=127 => {
+            let (input_2, stack) = verification_type_info_from_bytes(bytes)?;
+
+            (input_2, StackMapFrame::SameLocals1StackItemFrame { stack })
+        }
+        247 => {
+            let (input_2, offset_delta) = be_u16(input_1)?;
+            let (input_3, stack) = verification_type_info_from_bytes(input_2)?;
+
+            (
+                input_3,
+                StackMapFrame::SameLocals1StackItemFrameExtended {
+                    offset_delta,
+                    stack,
+                },
+            )
+        }
+        248..=250 => {
+            let (input_2, offset_delta) = be_u16(input_1)?;
+
+            (input_2, StackMapFrame::ChopFrame { offset_delta })
+        }
+        251 => {
+            let (input_2, offset_delta) = be_u16(input_1)?;
+
+            (input_2, StackMapFrame::SameFrameExtended { offset_delta })
+        }
+        frame_type @ 252..=254 => {
+            let (input_2, offset_delta) = be_u16(bytes)?;
+            let (input_3, locals) =
+                count(verification_type_info_from_bytes, frame_type - 251)(input_2)?;
+
+            (
+                input_3,
+                StackMapFrame::AppendFrame {
+                    offset_delta,
+                    locals,
+                },
+            )
+        }
+        255 => {
+            let (input_2, offset_delta) = be_u16(bytes)?;
+            let (input_3, locals) =
+                length_count(be_u16, verification_type_info_from_bytes)(input_2)?;
+            let (input_4, stack) =
+                length_count(be_u16, verification_type_info_from_bytes)(input_3)?;
+
+            (
+                input_4,
+                StackMapFrame::FullFrame {
+                    offset_delta,
+                    locals,
+                    stack,
+                },
+            )
+        }
+        _ => return Err(Err::Failure(Error::new(input_1, ErrorKind::Tag))),
+    })
+}
+
 fn target_info_from_bytes(bytes: &[u8], target_type: u8) -> IResult<&[u8], TargetInfo> {
     Ok(match target_type {
         0x00 | 0x01 => {
@@ -1072,7 +1146,7 @@ fn target_info_from_bytes(bytes: &[u8], target_type: u8) -> IResult<&[u8], Targe
                 },
             )
         }
-        _ => return Err(Err::Error(Error::new(bytes, ErrorKind::Tag))),
+        _ => return Err(Err::Failure(Error::new(bytes, ErrorKind::Tag))),
     })
 }
 
@@ -1113,4 +1187,29 @@ fn type_path_segment_from_bytes(bytes: &[u8]) -> IResult<&[u8], TypePathSegment>
             type_argument_index,
         },
     ))
+}
+
+fn verification_type_info_from_bytes(bytes: &[u8]) -> IResult<&[u8], VerificationTypeInfo> {
+    let (input_1, tag) = be_u8(bytes)?;
+
+    Ok(match tag {
+        0 => (input_1, VerificationTypeInfo::TopVariable),
+        1 => (input_1, VerificationTypeInfo::IntegerVariable),
+        2 => (input_1, VerificationTypeInfo::FloatVariable),
+        3 => (input_1, VerificationTypeInfo::DoubleVariable),
+        4 => (input_1, VerificationTypeInfo::LongVariable),
+        5 => (input_1, VerificationTypeInfo::NullVariable),
+        6 => (input_1, VerificationTypeInfo::UninitializedThisVariable),
+        7 => {
+            let (input_2, cpool_index) = be_u16(input_1)?;
+
+            (input_2, VerificationTypeInfo::ObjectVariable(cpool_index))
+        }
+        8 => {
+            let (input_2, offset) = be_u16(input_1)?;
+
+            (input_2, VerificationTypeInfo::UninitializedVariable(offset))
+        }
+        _ => return Err(Err::Failure(Error::new(input_1, ErrorKind::Tag))),
+    })
 }

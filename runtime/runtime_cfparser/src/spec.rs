@@ -271,10 +271,10 @@ pub enum VerificationTypeInfo {
     IntegerVariable,
     LongVariable,
     NullVariable,
-    ObjectVariable,
+    ObjectVariable(u16),
     TopVariable,
     UninitializedThisVariable,
-    UninitializedVariable,
+    UninitializedVariable(u16),
 }
 
 pub struct AccessFlags;
