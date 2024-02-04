@@ -1,2 +1,4 @@
 .idea/discord.xml
 **/target
+
+build/

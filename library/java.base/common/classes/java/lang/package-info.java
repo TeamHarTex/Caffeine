@@ -14,7 +14,4 @@
  * limitations under the License.
  */
 
-module java.base {
-    exports java.io;
-    exports java.lang;
-}
+package java.lang;
