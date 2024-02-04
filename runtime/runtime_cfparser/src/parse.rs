@@ -156,7 +156,9 @@ fn attribute_from_bytes<'a>(
             "NestMembers" => attribute_nest_members_from_bytes(input_2)?,
             "PermittedSubclasses" => attribute_permitted_subclasses_from_bytes(input_2)?,
             "Record" => attribute_record_from_bytes(input_2, constant_pool)?,
-            "RuntimeInvisibleAnnotations" => todo!(),
+            "RuntimeInvisibleAnnotations" => {
+                attribute_runtime_invisible_annotations_from_bytes(input_2)
+            }
             "RuntimeInvisibleParameterAnnotations" => todo!(),
             "RuntimeInvisibleTypeAnnotations" => todo!(),
             "RuntimeVisibleAnnotations" => todo!(),
@@ -360,6 +362,17 @@ fn attribute_record_from_bytes<'a>(
     })(bytes)?;
 
     Ok((input, AttributeInfo::Record { components }))
+}
+
+fn attribute_runtime_invisible_annotations_from_bytes<'a>(
+    bytes: &[u8],
+) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, annotations) = length_count(be_u16, annotation_from_bytes)(bytes)?;
+
+    Ok((
+        input,
+        AttributeInfo::RuntimeInvisibleAnnotations { annotations },
+    ))
 }
 
 fn bootstrap_method_from_bytes(bytes: &[u8]) -> IResult<&[u8], BootstrapMethod> {
