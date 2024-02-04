@@ -185,7 +185,7 @@ fn attribute_from_bytes<'a>(
             "SourceDebugExtension" => attribute_source_debug_extension_from_bytes(input_2, length)?,
             "SourceFile" => attribute_source_file_from_bytes(input_2)?,
             "StackMapTable" => attribute_stack_map_table_from_bytes(input_2)?,
-            "Synthetic" => todo!(),
+            "Synthetic" => (input_2, AttributeInfo::Synthetic),
             _ => return Err(Err::Failure(Error::new(bytes, ErrorKind::Tag))),
         }
     };
