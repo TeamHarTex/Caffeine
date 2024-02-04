@@ -170,9 +170,15 @@ fn attribute_from_bytes<'a>(
             "RuntimeInvisibleTypeAnnotations" => {
                 attribute_runtime_invisible_type_annotations_from_bytes(input_2)?
             }
-            "RuntimeVisibleAnnotations" => todo!(),
-            "RuntimeVisibleParameterAnnotations" => todo!(),
-            "RuntimeVisibleTypeAnnotations" => todo!(),
+            "RuntimeVisibleAnnotations" => {
+                attribute_runtime_visible_annotations_from_bytes(input_2)
+            }
+            "RuntimeVisibleParameterAnnotations" => {
+                attribute_runtime_visible_parameter_annotations_from_bytes(input_2)?
+            }
+            "RuntimeVisibleTypeAnnotations" => {
+                attribute_runtime_visible_type_annotations_from_bytes(input_2)?
+            }
             "SourceDebugExtension" => todo!(),
             "SourceFile" => todo!(),
             "StackMapTable" => todo!(),
@@ -405,6 +411,41 @@ fn attribute_runtime_invisible_type_annotations_from_bytes<'a>(
     Ok((
         input,
         AttributeInfo::RuntimeInvisibleTypeAnnotations { type_annotations },
+    ))
+}
+
+fn attribute_runtime_visible_annotations_from_bytes<'a>(
+    bytes: &[u8],
+) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, annotations) = length_count(be_u16, annotation_from_bytes)(bytes)?;
+
+    Ok((
+        input,
+        AttributeInfo::RuntimeVisibleAnnotations { annotations },
+    ))
+}
+
+fn attribute_runtime_visible_parameter_annotations_from_bytes<'a>(
+    bytes: &[u8],
+) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, parameter_annotations) = length_count(be_u16, annotation_from_bytes)(bytes)?;
+
+    Ok((
+        input,
+        AttributeInfo::RuntimeVisibleParameterAnnotations {
+            parameter_annotations,
+        },
+    ))
+}
+
+fn attribute_runtime_visible_type_annotations_from_bytes<'a>(
+    bytes: &[u8],
+) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, type_annotations) = length_count(be_u16, type_annotation_from_bytes)(bytes)?;
+
+    Ok((
+        input,
+        AttributeInfo::RuntimeVisibleTypeAnnotations { type_annotations },
     ))
 }
 
