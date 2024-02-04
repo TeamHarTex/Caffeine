@@ -180,7 +180,7 @@ fn attribute_from_bytes<'a>(
             }
             "Signature" => attribute_signature_from_bytes(input_2)?,
             "SourceDebugExtension" => attribute_source_debug_extension_from_bytes(input_2, length)?,
-            "SourceFile" => todo!(),
+            "SourceFile" => attribute_source_file_from_bytes(input_2)?,
             "StackMapTable" => todo!(),
             "Synthetic" => todo!(),
             _ => return Err(Err::Failure(Error::new(bytes, ErrorKind::Tag))),
@@ -465,6 +465,12 @@ fn attribute_source_debug_extension_from_bytes<'a>(
         input,
         AttributeInfo::SourceDebugExtension { debug_extension },
     ))
+}
+
+fn attribute_source_file_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, sourcefile_index) = be_u16(bytes)?;
+
+    Ok((input, AttributeInfo::SourceFile { sourcefile_index }))
 }
 
 fn bootstrap_method_from_bytes(bytes: &[u8]) -> IResult<&[u8], BootstrapMethod> {
