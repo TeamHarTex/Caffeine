@@ -149,7 +149,7 @@ fn attribute_from_bytes<'a>(
             "LocalVariableTypeTable" => attribute_local_variable_type_table_from_bytes(input_2)?,
             "MethodParameters" => attribute_method_parameters_from_bytes(input_2)?,
             "Module" => attribute_module_from_bytes(input_2)?,
-            "ModuleMainClass" => todo!(),
+            "ModuleMainClass" => attribute_module_main_class_from_bytes(input_2)?,
             "ModulePackages" => todo!(),
             "NestHost" => todo!(),
             "NestMembers" => todo!(),
@@ -283,6 +283,12 @@ fn attribute_module_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo
             provides,
         },
     ))
+}
+
+fn attribute_module_main_class_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, main_class_index) = be_u16(bytes)?;
+
+    Ok((input, AttributeInfo::ModuleMainClass { main_class_index }))
 }
 
 fn attribute_local_variable_table_from_bytes<'a>(
