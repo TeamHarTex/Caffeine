@@ -59,11 +59,11 @@ pub enum AttributeInfo<'class> {
         module_flags: u16,
         module_version_index: u16,
 
-        requires: Vec<ModuleRequire>,
-        exports: Vec<ModuleExport<'class>>,
-        opens: Vec<ModuleOpens<'class>>,
+        requires: Vec<ModuleRequires>,
+        exports: Vec<ModuleExports>,
+        opens: Vec<ModuleOpens>,
         uses: Vec<u16>,
-        provides: Vec<ModuleProvides<'class>>,
+        provides: Vec<ModuleProvides>,
     },
     ModuleMainClass {
         main_class_index: u16,
@@ -386,15 +386,15 @@ pub struct MethodParameter {
     pub access_flags: u16,
 }
 
-pub struct ModuleExport<'a> {
+pub struct ModuleExports {
     pub exports_index: u16,
     pub exports_flags: u16,
-    pub exports_to_indices: &'a [u16],
+    pub exports_to_indices: Vec<u16>,
 }
 
-pub struct ModuleExportFlags;
+pub struct ModuleExportsFlags;
 
-impl ModuleExportFlags {
+impl ModuleExportsFlags {
     pub const SYNTHETIC: u16 = 0x1000;
     pub const MANDATED: u16 = 0x8000;
 }
@@ -407,10 +407,10 @@ impl ModuleFlags {
     pub const MANDATED: u16 = 0x8000;
 }
 
-pub struct ModuleOpens<'a> {
+pub struct ModuleOpens {
     pub opens_index: u16,
     pub opens_flags: u16,
-    pub opens_to_indices: &'a [u16],
+    pub opens_to_indices: Vec<u16>,
 }
 
 pub struct ModuleOpensFlags;
@@ -420,20 +420,20 @@ impl ModuleOpensFlags {
     pub const MANDATED: u16 = 0x8000;
 }
 
-pub struct ModuleProvides<'a> {
+pub struct ModuleProvides {
     pub provides_index: u16,
-    pub provides_with_indices: &'a [u16],
+    pub provides_with_indices: Vec<u16>,
 }
 
-pub struct ModuleRequire {
+pub struct ModuleRequires {
     pub requires_index: u16,
     pub requires_flags: u16,
     pub requires_version_index: u16,
 }
 
-pub struct ModuleRequireFlags;
+pub struct ModuleRequiresFlags;
 
-impl ModuleRequireFlags {
+impl ModuleRequiresFlags {
     pub const TRANSITIVE: u16 = 0x0020;
     pub const STATIC_PHASE: u16 = 0x0040;
     pub const SYNTHETIC: u16 = 0x1000;

@@ -43,6 +43,10 @@ use crate::spec::LocalVariable;
 use crate::spec::LocalVariableType;
 use crate::spec::Method;
 use crate::spec::MethodParameter;
+use crate::spec::ModuleExports;
+use crate::spec::ModuleOpens;
+use crate::spec::ModuleProvides;
+use crate::spec::ModuleRequires;
 use crate::spec::Version;
 
 pub fn classfile_from_bytes(bytes: &[u8]) -> IResult<&[u8], Classfile> {
@@ -144,7 +148,7 @@ fn attribute_from_bytes<'a>(
             "LocalVariableTable" => attribute_local_variable_table_from_bytes(input_2)?,
             "LocalVariableTypeTable" => attribute_local_variable_type_table_from_bytes(input_2)?,
             "MethodParameters" => attribute_method_parameters_from_bytes(input_2)?,
-            "Module" => todo!(),
+            "Module" => attribute_module_from_bytes(input_2)?,
             "ModuleMainClass" => todo!(),
             "ModulePackages" => todo!(),
             "NestHost" => todo!(),
@@ -254,6 +258,31 @@ fn attribute_line_number_table_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], At
     let (input, line_number_table) = length_count(be_u16, line_number_from_bytes)(bytes)?;
 
     Ok((input, AttributeInfo::LineNumberTable { line_number_table }))
+}
+
+fn attribute_module_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input_1, module_name_index) = be_u16(bytes)?;
+    let (input_2, module_flags) = be_u16(input_1)?;
+    let (input_3, module_version_index) = be_u16(input_2)?;
+    let (input_4, requires) = length_count(be_u16, module_require_from_bytes)(input_3)?;
+    let (input_5, exports) = length_count(be_u16, module_export_from_bytes)(input_4)?;
+    let (input_6, opens) = length_count(be_u16, module_opens_from_bytes)(input_5)?;
+    let (input_7, uses) = length_count(be_u16, be_u16)(input_6)?;
+    let (input_8, provides) = length_count(be_u16, module_provides_from_bytes)(input_7)?;
+
+    Ok((
+        input_8,
+        AttributeInfo::Module {
+            module_name_index,
+            module_flags,
+            module_version_index,
+            requires,
+            exports,
+            opens,
+            uses,
+            provides,
+        },
+    ))
 }
 
 fn attribute_local_variable_table_from_bytes<'a>(
@@ -730,6 +759,64 @@ fn method_parameter_from_bytes(bytes: &[u8]) -> IResult<&[u8], MethodParameter> 
         MethodParameter {
             name_index,
             access_flags,
+        },
+    ))
+}
+
+fn module_export_from_bytes(bytes: &[u8]) -> IResult<&[u8], ModuleExports> {
+    let (input_1, exports_index) = be_u16(bytes)?;
+    let (input_2, exports_flags) = be_u16(input_1)?;
+    let (input_3, exports_to_indices) = length_count(be_u16, be_u16)(input_2)?;
+
+    Ok((
+        input_3,
+        ModuleExports {
+            exports_index,
+            exports_flags,
+            exports_to_indices,
+        },
+    ))
+}
+
+fn module_opens_from_bytes(bytes: &[u8]) -> IResult<&[u8], ModuleOpens> {
+    let (input_1, opens_index) = be_u16(bytes)?;
+    let (input_2, opens_flags) = be_u16(input_1)?;
+    let (input_3, opens_to_indices) = length_count(be_u16, be_u16)(input_2)?;
+
+    Ok((
+        input_3,
+        ModuleOpens {
+            opens_index,
+            opens_flags,
+            opens_to_indices,
+        },
+    ))
+}
+
+fn module_provides_from_bytes(bytes: &[u8]) -> IResult<&[u8], ModuleProvides> {
+    let (input_1, provides_index) = be_u16(bytes)?;
+    let (input_2, provides_with_indices) = be_u16(input_1)?;
+
+    Ok((
+        input_2,
+        ModuleProvides {
+            provides_index,
+            provides_with_indices,
+        },
+    ))
+}
+
+fn module_require_from_bytes(bytes: &[u8]) -> IResult<&[u8], ModuleRequires> {
+    let (input_1, requires_index) = be_u16(bytes)?;
+    let (input_2, requires_flags) = be_u16(input_1)?;
+    let (input_3, requires_version_index) = be_u16(input_2)?;
+
+    Ok((
+        input_3,
+        ModuleRequires {
+            requires_index,
+            requires_flags,
+            requires_version_index,
         },
     ))
 }
