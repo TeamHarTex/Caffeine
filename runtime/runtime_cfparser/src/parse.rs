@@ -151,7 +151,7 @@ fn attribute_from_bytes<'a>(
             "Module" => attribute_module_from_bytes(input_2)?,
             "ModuleMainClass" => attribute_module_main_class_from_bytes(input_2)?,
             "ModulePackages" => attribute_module_packages_from_bytes(input_2)?,
-            "NestHost" => todo!(),
+            "NestHost" => attribute_nest_host_from_bytes(input_2)?,
             "NestMembers" => todo!(),
             "PermittedSubclasses" => todo!(),
             "Record" => todo!(),
@@ -260,6 +260,39 @@ fn attribute_line_number_table_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], At
     Ok((input, AttributeInfo::LineNumberTable { line_number_table }))
 }
 
+fn attribute_local_variable_table_from_bytes<'a>(
+    bytes: &[u8],
+) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, local_variable_table) = length_count(be_u16, local_variable_from_bytes)(bytes)?;
+
+    Ok((
+        input,
+        AttributeInfo::LocalVariableTable {
+            local_variable_table,
+        },
+    ))
+}
+
+fn attribute_local_variable_type_table_from_bytes<'a>(
+    bytes: &[u8],
+) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, local_variable_type_table) =
+        length_count(be_u16, local_variable_type_from_bytes)(bytes)?;
+
+    Ok((
+        input,
+        AttributeInfo::LocalVariableTypeTable {
+            local_variable_type_table,
+        },
+    ))
+}
+
+fn attribute_method_parameters_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, parameters) = length_count(be_u16, method_parameter_from_bytes)(bytes)?;
+
+    Ok((input, AttributeInfo::MethodParameters { parameters }))
+}
+
 fn attribute_module_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo<'a>> {
     let (input_1, module_name_index) = be_u16(bytes)?;
     let (input_2, module_flags) = be_u16(input_1)?;
@@ -297,37 +330,10 @@ fn attribute_module_packages_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], Attr
     Ok((input, AttributeInfo::ModulePackages { package_index }))
 }
 
-fn attribute_local_variable_table_from_bytes<'a>(
-    bytes: &[u8],
-) -> IResult<&[u8], AttributeInfo<'a>> {
-    let (input, local_variable_table) = length_count(be_u16, local_variable_from_bytes)(bytes)?;
+fn attribute_nest_host_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, host_class_index) = be_u16(bytes)?;
 
-    Ok((
-        input,
-        AttributeInfo::LocalVariableTable {
-            local_variable_table,
-        },
-    ))
-}
-
-fn attribute_local_variable_type_table_from_bytes<'a>(
-    bytes: &[u8],
-) -> IResult<&[u8], AttributeInfo<'a>> {
-    let (input, local_variable_type_table) =
-        length_count(be_u16, local_variable_type_from_bytes)(bytes)?;
-
-    Ok((
-        input,
-        AttributeInfo::LocalVariableTypeTable {
-            local_variable_type_table,
-        },
-    ))
-}
-
-fn attribute_method_parameters_from_bytes<'a>(bytes: &[u8]) -> IResult<&[u8], AttributeInfo<'a>> {
-    let (input, parameters) = length_count(be_u16, method_parameter_from_bytes)(bytes)?;
-
-    Ok((input, AttributeInfo::MethodParameters { parameters }))
+    Ok((input, AttributeInfo::NestHost { host_class_index }))
 }
 
 fn bootstrap_method_from_bytes(bytes: &[u8]) -> IResult<&[u8], BootstrapMethod> {
