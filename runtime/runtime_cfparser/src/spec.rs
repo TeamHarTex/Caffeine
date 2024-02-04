@@ -235,23 +235,33 @@ pub enum StackMapFrame {
 }
 
 pub enum TargetInfo {
-    Catch(u16),
-    Empty,
-    FormalParameter(u8),
-    LocalVar {
-        table: Vec<LocalVar>,
-    },
-    Offset(u16),
-    Supertype(u16),
-    Throws(u16),
-    TypeArgument {
-        offset: u16,
-        type_argument_index: u16,
-    },
+    // Tag: 0x00, 0x01
     TypeParameter(u8),
+    // Tag: 0x10
+    Supertype(u16),
+    // Tag: 0x11, 0x12
     TypeParameterBound {
         type_parameter_index: u8,
         bound_index: u8,
+    },
+    // Tag: 0x13, 0x14, 0x15
+    Empty,
+    // Tag: 0x16
+    FormalParameter(u8),
+    // Tag: 0x17
+    Throws(u16),
+    // Tag: 0x40, 0x41
+    LocalVar {
+        table: Vec<LocalVar>,
+    },
+    // Tag: 0x42
+    Catch(u16),
+    // Tag: 0x43, 0x44, 0x45, 0x46
+    Offset(u16),
+    // Tag: 0x47, 0x48, 0x49, 0x4A, 0x4B
+    TypeArgument {
+        offset: u16,
+        type_argument_index: u8,
     },
 }
 

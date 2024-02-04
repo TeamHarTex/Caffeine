@@ -39,6 +39,7 @@ use crate::spec::ExceptionTableEntry;
 use crate::spec::Field;
 use crate::spec::InnerClass;
 use crate::spec::LineNumber;
+use crate::spec::LocalVar;
 use crate::spec::LocalVariable;
 use crate::spec::LocalVariableType;
 use crate::spec::Method;
@@ -48,6 +49,10 @@ use crate::spec::ModuleOpens;
 use crate::spec::ModuleProvides;
 use crate::spec::ModuleRequires;
 use crate::spec::RecordComponent;
+use crate::spec::TargetInfo;
+use crate::spec::TypeAnnotation;
+use crate::spec::TypePath;
+use crate::spec::TypePathSegment;
 use crate::spec::Version;
 
 pub fn classfile_from_bytes(bytes: &[u8]) -> IResult<&[u8], Classfile> {
@@ -162,7 +167,9 @@ fn attribute_from_bytes<'a>(
             "RuntimeInvisibleParameterAnnotations" => {
                 attribute_runtime_invisible_parameter_annotations_from_bytes(input_2)?
             }
-            "RuntimeInvisibleTypeAnnotations" => todo!(),
+            "RuntimeInvisibleTypeAnnotations" => {
+                attribute_runtime_invisible_type_annotations_from_bytes(input_2)?
+            }
             "RuntimeVisibleAnnotations" => todo!(),
             "RuntimeVisibleParameterAnnotations" => todo!(),
             "RuntimeVisibleTypeAnnotations" => todo!(),
@@ -387,6 +394,17 @@ fn attribute_runtime_invisible_parameter_annotations_from_bytes<'a>(
         AttributeInfo::RuntimeInvisibleParameterAnnotations {
             parameter_annotations,
         },
+    ))
+}
+
+fn attribute_runtime_invisible_type_annotations_from_bytes<'a>(
+    bytes: &[u8],
+) -> IResult<&[u8], AttributeInfo<'a>> {
+    let (input, type_annotations) = length_count(be_u16, type_annotation_from_bytes)(bytes)?;
+
+    Ok((
+        input,
+        AttributeInfo::RuntimeInvisibleTypeAnnotations { type_annotations },
     ))
 }
 
@@ -763,6 +781,21 @@ fn line_number_from_bytes(bytes: &[u8]) -> IResult<&[u8], LineNumber> {
     ))
 }
 
+fn local_var_from_bytes(bytes: &[u8]) -> IResult<&[u8], LocalVar> {
+    let (input_1, start_pc) = be_u16(bytes)?;
+    let (input_2, length) = be_u16(input_1)?;
+    let (input_3, index) = be_u16(input_2)?;
+
+    Ok((
+        input_3,
+        LocalVar {
+            start_pc,
+            length,
+            index,
+        },
+    ))
+}
+
 fn local_variable_from_bytes(bytes: &[u8]) -> IResult<&[u8], LocalVariable> {
     let (input_1, start_pc) = be_u16(bytes)?;
     let (input_2, length) = be_u16(input_1)?;
@@ -908,6 +941,111 @@ fn record_component_from_bytes<'a>(
             name_index,
             descriptor_index,
             attributes,
+        },
+    ))
+}
+
+fn target_info_from_bytes(bytes: &[u8], target_type: u8) -> IResult<&[u8], TargetInfo> {
+    Ok(match target_type {
+        0x00 | 0x01 => {
+            let (input_1, type_parameter_index) = be_u8(bytes)?;
+
+            (input_1, TargetInfo::TypeParameter(type_parameter_index))
+        }
+        0x10 => {
+            let (input_1, supertype_index) = be_u16(bytes)?;
+
+            (input_1, TargetInfo::Supertype(supertype_index))
+        }
+        0x11 | 0x12 => {
+            let (input_1, type_parameter_index) = be_u8(bytes)?;
+            let (input_2, bound_index) = be_u8(input_1)?;
+
+            (
+                input_2,
+                TargetInfo::TypeParameterBound {
+                    type_parameter_index,
+                    bound_index,
+                },
+            )
+        }
+        0x13 | 0x14 | 0x15 => TargetInfo::Empty,
+        0x16 => {
+            let (input, formal_parameter_index) = be_u8(bytes)?;
+
+            (input, TargetInfo::FormalParameter(formal_parameter_index))
+        }
+        0x17 => {
+            let (input, throws_type_index) = be_u16(bytes)?;
+
+            (input, TargetInfo::Throws(throws_type_index))
+        }
+        0x40 | 0x41 => {
+            let (input, table) = length_count(be_u16, local_var_from_bytes)(bytes)?;
+
+            (input, TargetInfo::LocalVar { table })
+        }
+        0x42 => {
+            let (input, exception_table_index) = be_u16(bytes)?;
+
+            (input, TargetInfo::Catch(exception_table_index))
+        }
+        0x43 | 0x44 | 0x45 | 0x46 => {
+            let (input, offset) = be_u16(bytes)?;
+
+            (input, TargetInfo::Offset(offset))
+        }
+        0x47 | 0x48 | 0x49 | 0x4A | 0x4B => {
+            let (input_1, offset) = be_u16(bytes)?;
+            let (input_2, type_argument_index) = be_u16(input_1)?;
+
+            (
+                input_2,
+                TargetInfo::TypeArgument {
+                    offset,
+                    type_argument_index,
+                },
+            )
+        }
+        _ => return Err(Err::Error(Error::new(bytes, ErrorKind::Tag))),
+    })
+}
+
+fn type_annotation_from_bytes(bytes: &[u8]) -> IResult<&[u8], TypeAnnotation> {
+    let (input_1, target_type) = be_u8(bytes)?;
+    let (input_2, target_info) = target_info_from_bytes(input_1, target_type)?;
+    let (input_3, target_path) = type_path_from_bytes(input_2)?;
+    let (input_4, type_index) = be_u16(input_3)?;
+    let (input_5, element_value_pairs) =
+        length_count(be_u16, element_value_pair_from_bytes)(input_4)?;
+
+    Ok((
+        input_5,
+        TypeAnnotation {
+            target_type,
+            target_info,
+            target_path,
+            type_index,
+            element_value_pairs,
+        },
+    ))
+}
+
+fn type_path_from_bytes(bytes: &[u8]) -> IResult<&[u8], TypePath> {
+    let (input, path) = length_count(be_u8, type_path_segment_from_bytes)(bytes)?;
+
+    Ok((input, TypePath { path }))
+}
+
+fn type_path_segment_from_bytes(bytes: &[u8]) -> IResult<&[u8], TypePathSegment> {
+    let (input_1, type_path_kind) = be_u8(bytes)?;
+    let (input_2, type_argument_index) = be_u8(input_1)?;
+
+    Ok((
+        input_2,
+        TypePathSegment {
+            type_path_kind,
+            type_argument_index,
         },
     ))
 }
